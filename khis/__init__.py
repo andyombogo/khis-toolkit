@@ -24,7 +24,15 @@ from .counties import (
     update_from_api,
 )
 from .forecast import forecast_indicator_series
-from .quality import compute_quality_summary
+from .quality import (
+    completeness_score,
+    compute_quality_summary,
+    county_scorecard,
+    outlier_report,
+    plot_quality_heatmap,
+    timeliness_report,
+    zero_report_analysis,
+)
 
 
 def connect(
@@ -68,9 +76,9 @@ def get(
     requested_counties = _coerce_to_string_list(counties) + _coerce_to_string_list(county)
     for county_name in requested_counties:
         try:
-            resolved_org_units.append(resolve_org_unit_id(county_name))
-        except ValueError:
             resolved_org_units.append(connector.resolve_org_unit_id_by_name(county_name))
+        except (ConnectionError, PermissionError, RuntimeError, ValueError):
+            resolved_org_units.append(resolve_org_unit_id(county_name))
 
     if not resolved_org_units:
         raise ValueError("Pass county/counties or org_unit_ids when calling khis.get().")
@@ -83,9 +91,9 @@ def get(
     )
 
 
-def quality_report(df: Any) -> dict[str, Any]:
-    """Return the current KHIS quality summary for a cleaned dataset."""
-    return compute_quality_summary(df)
+def quality_report(df: Any) -> Any:
+    """Run the county-level quality scorecard and return its outputs."""
+    return county_scorecard(df)
 
 
 def forecast(df: Any, weeks_ahead: int = 4, **kwargs: Any) -> Any:
@@ -100,6 +108,8 @@ __all__ = [
     "clean_indicator_frame",
     "connect",
     "compute_quality_summary",
+    "completeness_score",
+    "county_scorecard",
     "fill_missing",
     "flag_missing",
     "forecast",
@@ -111,10 +121,14 @@ __all__ = [
     "get_county_coordinates",
     "list_indicators",
     "list_counties",
+    "outlier_report",
+    "plot_quality_heatmap",
     "quality_report",
     "resolve_org_unit_id",
     "standardise_county_names",
+    "timeliness_report",
     "update_from_api",
+    "zero_report_analysis",
 ]
 
 
