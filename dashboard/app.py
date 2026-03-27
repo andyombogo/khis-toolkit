@@ -13,6 +13,7 @@ import pandas as pd
 
 import khis
 from dashboard.map import create_county_map, create_quality_table, create_trend_chart
+from khis.connector import DEMO_BASE_URL, DEMO_PASSWORD, DEMO_USERNAME
 
 
 @dataclass
@@ -28,6 +29,7 @@ class DashboardState:
     indicator_id: str
     banner: str
     last_updated: str
+    data_mode: str
 
 
 def create_app() -> Flask:
@@ -114,7 +116,13 @@ def create_app() -> Flask:
     def health():
         """Return a basic dashboard health payload."""
         state = _state(app)
-        return jsonify({"status": "ok", "last_updated": state.last_updated})
+        return jsonify(
+            {
+                "status": "ok",
+                "last_updated": state.last_updated,
+                "data_mode": state.data_mode,
+            }
+        )
 
     return app
 
@@ -126,21 +134,64 @@ def _state(app: Flask) -> DashboardState:
 
 def _load_dashboard_state() -> DashboardState:
     """Connect to DHIS2 or fall back to demo county data for the dashboard."""
-    try:
-        connector = khis.connect()
-        if getattr(connector, "using_demo_server", False):
-            data, indicator_name, indicator_id = _load_demo_dashboard_data(connector)
-            banner = "Demo using DHIS2 public test data. Connect your KHIS credentials for real Kenya county data."
-        else:
-            data, indicator_name, indicator_id = _load_khis_dashboard_data(connector)
-            banner = "Connected to KHIS credentials. Showing live county-style indicator data."
-    except Exception as exc:
+    data_mode = _resolve_dashboard_data_mode()
+
+    if data_mode == "offline_demo":
         data, indicator_name, indicator_id = _offline_dashboard_data()
         banner = (
-            "Demo using locally generated county sample data because live DHIS2 fetch failed. "
-            f"Reason: {exc}"
+            "Offline demo mode. Using bundled synthetic county data so the public "
+            "dashboard works without KHIS or public DHIS2 availability."
         )
-        connector = khis.connect()
+        connector = None
+    else:
+        try:
+            if data_mode == "dhis2_demo":
+                connector = khis.connect(
+                    base_url=DEMO_BASE_URL,
+                    username=DEMO_USERNAME,
+                    password=DEMO_PASSWORD,
+                )
+                data, indicator_name, indicator_id = _load_demo_dashboard_data(
+                    connector
+                )
+                banner = (
+                    "Demo mode using the public DHIS2 HMIS server mapped onto Kenya "
+                    "counties."
+                )
+            elif data_mode == "khis_live":
+                connector = khis.connect()
+                data, indicator_name, indicator_id = _load_khis_dashboard_data(
+                    connector
+                )
+                banner = (
+                    "Connected to KHIS credentials. Showing live county-style "
+                    "indicator data."
+                )
+            else:
+                connector = khis.connect()
+                if getattr(connector, "using_demo_server", False):
+                    data, indicator_name, indicator_id = _load_demo_dashboard_data(
+                        connector
+                    )
+                    banner = (
+                        "Demo using DHIS2 public test data. Connect your KHIS "
+                        "credentials for real Kenya county data."
+                    )
+                else:
+                    data, indicator_name, indicator_id = _load_khis_dashboard_data(
+                        connector
+                    )
+                    banner = (
+                        "Connected to KHIS credentials. Showing live county-style "
+                        "indicator data."
+                    )
+        except Exception as exc:
+            data, indicator_name, indicator_id = _offline_dashboard_data()
+            banner = (
+                "Offline demo fallback is active because live data loading failed. "
+                f"Reason: {exc}"
+            )
+            connector = None
 
     cleaned = khis.clean(data)
     scorecard, summary = khis.quality_report(cleaned)
@@ -164,7 +215,24 @@ def _load_dashboard_state() -> DashboardState:
         indicator_id=indicator_id,
         banner=banner,
         last_updated=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
+        data_mode=data_mode,
     )
+
+
+def _resolve_dashboard_data_mode() -> str:
+    """Return the configured dashboard data mode."""
+    configured = os.getenv("KHIS_DATA_MODE", "").strip().lower()
+    if configured:
+        if configured not in {"auto", "offline_demo", "dhis2_demo", "khis_live"}:
+            raise ValueError(
+                "KHIS_DATA_MODE must be one of: auto, offline_demo, dhis2_demo, khis_live."
+            )
+        return configured
+
+    if os.getenv("RENDER") or os.getenv("RENDER_EXTERNAL_URL"):
+        return "offline_demo"
+
+    return "auto"
 
 
 def _load_demo_dashboard_data(connector) -> tuple[pd.DataFrame, str, str]:

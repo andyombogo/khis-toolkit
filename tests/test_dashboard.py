@@ -118,6 +118,7 @@ def test_dashboard_exposes_mental_health_county_endpoint():
         indicator_id="offline_malaria_cases",
         banner="Offline demo banner",
         last_updated="2026-03-27 12:00 UTC",
+        data_mode="offline_demo",
     )
     with patch("dashboard.app._load_dashboard_state", return_value=state):
         app = create_app()
@@ -185,6 +186,7 @@ def test_dashboard_forecast_endpoint_falls_back_to_observed_series():
         indicator_id="offline_malaria_cases",
         banner="Offline demo banner",
         last_updated="2026-03-27 12:00 UTC",
+        data_mode="offline_demo",
     )
 
     with patch("dashboard.app._load_dashboard_state", return_value=state):
@@ -263,6 +265,7 @@ def test_dashboard_root_handles_empty_loaded_dataset():
         indicator_id="offline_malaria_cases",
         banner="Offline demo banner",
         last_updated="2026-03-27 12:00 UTC",
+        data_mode="offline_demo",
     )
 
     with patch("dashboard.app._load_dashboard_state", return_value=state):
@@ -276,3 +279,20 @@ def test_dashboard_root_handles_empty_loaded_dataset():
     assert "No usable series is available for this county yet." in response.get_data(
         as_text=True
     )
+
+
+def test_dashboard_offline_mode_avoids_external_connector_calls(monkeypatch):
+    """offline_demo mode should boot from bundled data without connecting outward."""
+    monkeypatch.setenv("KHIS_DATA_MODE", "offline_demo")
+
+    def _unexpected_connect(*args, **kwargs):
+        raise AssertionError("khis.connect() should not be called in offline_demo mode")
+
+    with patch("dashboard.app.khis.connect", side_effect=_unexpected_connect):
+        app = create_app()
+
+    client = app.test_client()
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.get_json()["data_mode"] == "offline_demo"

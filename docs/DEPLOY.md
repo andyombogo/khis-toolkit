@@ -8,6 +8,7 @@ This repo is set up to deploy the Flask dashboard to Render using the checked-in
 - Decide whether you want demo data or real KHIS credentials.
 - If you use demo mode, the repo is currently verified against `https://demos.dhis2.org/hmis_dev` as of 2026-03-27.
 - This blueprint now pins `PYTHON_VERSION=3.11.11` because the repo is tested on Python `3.9-3.11`, and Render's current default Python version for newly created services can move independently of that support window.
+- The public Render demo should use `KHIS_DATA_MODE=offline_demo` so the app does not depend on external DHIS2/KHIS availability just to load.
 
 ## Render Setup
 
@@ -21,6 +22,7 @@ This repo is set up to deploy the Flask dashboard to Render using the checked-in
 8. Confirm the start command is `gunicorn dashboard.app:app`.
 9. Confirm the health check path is `/health`.
 10. Confirm the environment variables include `PYTHON_VERSION=3.11.11`.
+11. Confirm `KHIS_DATA_MODE=offline_demo` for the public demo deployment.
 
 ## Environment Variables
 
@@ -32,6 +34,7 @@ For demo mode, keep these values:
 - `DHIS2_USERNAME=demo_en`
 - `DHIS2_PASSWORD=District1#`
 - `PYTHON_VERSION=3.11.11`
+- `KHIS_DATA_MODE=offline_demo`
 
 For real KHIS access, replace them with your Ministry of Health credentials:
 
@@ -39,6 +42,7 @@ For real KHIS access, replace them with your Ministry of Health credentials:
 - `DHIS2_USERNAME`
 - `DHIS2_PASSWORD`
 - Keep `PYTHON_VERSION=3.11.11` unless you have tested a different version locally and in CI.
+- Change `KHIS_DATA_MODE` to `khis_live` only after you have verified the credentials and live indicator availability.
 
 ## First Deploy
 
@@ -50,7 +54,8 @@ For real KHIS access, replace them with your Ministry of Health credentials:
 
 ## Troubleshooting
 
-- If the dashboard shows demo data, that is expected when you keep the public demo credentials.
-- If the public DHIS2 demo server is slow or unavailable, the notebooks and dashboard fall back to deterministic sample data so the workflow still works.
+- If the dashboard shows demo data, that is expected for the public Render link.
+- `offline_demo` is the recommended public-demo mode because it never depends on KHIS or public DHIS2 uptime.
+- If you intentionally switch to `dhis2_demo`, the notebooks and dashboard still fall back to deterministic sample data when the public demo host is slow or unavailable.
 - If Render fails during install, check that the Python environment matches [requirements.txt](../requirements.txt).
 - If the health check fails, verify the deployed service is using `gunicorn dashboard.app:app` and that `/health` returns JSON.

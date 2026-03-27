@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pandas as pd
 from fastapi.testclient import TestClient
+from unittest.mock import patch
 
 from src.api import CachedAPIState, create_app
 
@@ -93,6 +94,7 @@ def test_health_and_counties_endpoints_work_in_development_mode():
 
     assert health.status_code == 200
     assert health.json()["status"] == "ok"
+    assert "data_mode" in health.json()
     assert counties.status_code == 200
     assert len(counties.json()) == 47
 
@@ -137,3 +139,22 @@ def test_quality_and_forecast_endpoints_use_cached_state():
     assert mental_health_summary.json()[0]["county"] == "Nairobi"
     assert forecast.status_code == 200
     assert len(forecast.json()) >= 2
+
+
+def test_api_offline_mode_avoids_external_connector_calls(monkeypatch):
+    """offline_demo mode should allow the API to boot without external DHIS2 access."""
+    monkeypatch.setenv("KHIS_DATA_MODE", "offline_demo")
+
+    def _unexpected_connect(*args, **kwargs):
+        raise AssertionError("khis.connect() should not be called in offline_demo mode")
+
+    with patch("src.api.khis.connect", side_effect=_unexpected_connect):
+        app = create_app(api_key=None)
+
+    client = TestClient(app)
+    health = client.get("/health")
+    summary = client.get("/mental-health/summary")
+
+    assert health.status_code == 200
+    assert health.json()["data_mode"] == "offline_demo"
+    assert summary.status_code == 200

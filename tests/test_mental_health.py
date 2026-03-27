@@ -36,6 +36,19 @@ def test_pull_mental_health_data_falls_back_to_demo_series_when_live_lookup_fail
     assert (result["data_source"] == "demo_fallback").all()
 
 
+def test_pull_mental_health_data_supports_offline_mode_without_connector():
+    """Offline demo mode should not require a live connector object."""
+    result = khis.pull_mental_health_data(
+        connector=None,
+        counties=["Nairobi"],
+        periods="last_3_months",
+    )
+
+    assert not result.empty
+    assert set(result["org_unit_name"]) == {"Nairobi"}
+    assert (result["data_source"] == "demo_fallback").all()
+
+
 def test_summarise_county_mental_health_builds_county_snapshot():
     """County summaries should expose burden bands and trend direction."""
     frame = pd.DataFrame(

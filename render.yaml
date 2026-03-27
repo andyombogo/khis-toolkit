@@ -9,6 +9,8 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.11
+      - key: KHIS_DATA_MODE
+        value: offline_demo
       - key: FLASK_SECRET_KEY
         generateValue: true
       - key: DHIS2_BASE_URL

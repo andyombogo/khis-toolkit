@@ -79,6 +79,8 @@ county_summary = khis.summarise_county_mental_health(mns)
 
 Deployment is configured in [render.yaml](render.yaml). Follow the [Render deployment guide](docs/DEPLOY.md) to publish the Flask dashboard with demo or KHIS credentials. Render will usually assign `https://khis-toolkit-dashboard.onrender.com` if the service name is available; confirm the actual URL after the first deploy and update this section if Render gives you a different subdomain.
 
+For the public portfolio/demo link, the recommended setup is `KHIS_DATA_MODE=offline_demo`. That keeps the dashboard stable even before KHIS credentials are granted, because it uses bundled county demo data instead of relying on external DHIS2/KHIS uptime.
+
 ## All 47 Kenya Counties Supported
 
 | County | Region | Placeholder DHIS2 ID |

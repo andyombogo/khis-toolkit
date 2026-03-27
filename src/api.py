@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 import pandas as pd
 
 import khis
+from khis.connector import DEMO_BASE_URL, DEMO_PASSWORD, DEMO_USERNAME
 
 VERSION = "0.1.0"
 
@@ -31,6 +32,7 @@ class APISettings:
     """Runtime settings for the KHIS API service."""
 
     api_key: str | None
+    data_mode: str
 
 
 @dataclass
@@ -51,7 +53,8 @@ class CachedAPIState:
 def create_app(api_key: str | None = None) -> FastAPI:
     """Create the KHIS Toolkit FastAPI application."""
     settings = APISettings(
-        api_key=(api_key or os.getenv("KHIS_API_KEY") or "").strip() or None
+        api_key=(api_key or os.getenv("KHIS_API_KEY") or "").strip() or None,
+        data_mode=_resolve_data_mode(),
     )
     if settings.api_key is None:
         print(
@@ -90,6 +93,7 @@ def create_app(api_key: str | None = None) -> FastAPI:
             "status": "ok",
             "version": VERSION,
             "auth_enabled": settings.api_key is not None,
+            "data_mode": settings.data_mode,
         }
 
     @app.get("/counties", dependencies=[Depends(require_api_key)])
@@ -196,18 +200,43 @@ def _ensure_cached_state(app: FastAPI) -> CachedAPIState:
 
 def _load_cached_state() -> CachedAPIState:
     """Build a default cached dataset from KHIS, demo DHIS2, or offline fallback."""
-    try:
-        connector = khis.connect()
-        if getattr(connector, "using_demo_server", False):
-            data, indicator_name, indicator_id, banner = _load_demo_state(connector)
-        else:
-            data, indicator_name, indicator_id, banner = _load_live_state(connector)
-    except Exception as exc:
+    data_mode = _resolve_data_mode()
+    if data_mode == "offline_demo":
         data, indicator_name, indicator_id = _offline_data()
         banner = (
-            f"Offline demo fallback was used because live data loading failed: {exc}"
+            "Offline demo mode. Using bundled synthetic county data so the public "
+            "API works without KHIS or public DHIS2 availability."
         )
-        connector = khis.connect()
+        connector = None
+    else:
+        try:
+            if data_mode == "dhis2_demo":
+                connector = khis.connect(
+                    base_url=DEMO_BASE_URL,
+                    username=DEMO_USERNAME,
+                    password=DEMO_PASSWORD,
+                )
+                data, indicator_name, indicator_id, banner = _load_demo_state(connector)
+            elif data_mode == "khis_live":
+                connector = khis.connect()
+                data, indicator_name, indicator_id, banner = _load_live_state(connector)
+            else:
+                connector = khis.connect()
+                if getattr(connector, "using_demo_server", False):
+                    data, indicator_name, indicator_id, banner = _load_demo_state(
+                        connector
+                    )
+                else:
+                    data, indicator_name, indicator_id, banner = _load_live_state(
+                        connector
+                    )
+        except Exception as exc:
+            data, indicator_name, indicator_id = _offline_data()
+            banner = (
+                "Offline demo fallback was used because live data loading failed: "
+                f"{exc}"
+            )
+            connector = None
 
     cleaned = khis.clean(data)
     scorecard, summary = khis.quality_report(cleaned)
@@ -232,6 +261,18 @@ def _load_cached_state() -> CachedAPIState:
         last_updated=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
         banner=banner,
     )
+
+
+def _resolve_data_mode() -> str:
+    """Resolve the API data mode from environment variables."""
+    configured = os.getenv("KHIS_DATA_MODE", "").strip().lower()
+    if configured:
+        if configured not in {"auto", "offline_demo", "dhis2_demo", "khis_live"}:
+            raise ValueError(
+                "KHIS_DATA_MODE must be one of: auto, offline_demo, dhis2_demo, khis_live."
+            )
+        return configured
+    return "auto"
 
 
 def _load_demo_state(connector) -> tuple[pd.DataFrame, str, str, str]:

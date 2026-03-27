@@ -144,7 +144,7 @@ def get_indicator_package(package: str = "mns_core") -> list[dict[str, Any]]:
 
 
 def resolve_mental_health_indicators(
-    connector,
+    connector=None,
     package: str = "mns_core",
 ) -> pd.DataFrame:
     """Resolve curated mental-health profiles against live KHIS indicator metadata.
@@ -153,6 +153,21 @@ def resolve_mental_health_indicators(
     contains one row per curated profile, even when no live KHIS match is
     available.
     """
+    if connector is None:
+        rows = []
+        for profile in get_indicator_package(package):
+            rows.append(
+                {
+                    **_serialise_catalog_row(profile),
+                    "matched_id": None,
+                    "matched_name": None,
+                    "matched_search_term": None,
+                    "available": False,
+                    "source": "demo_fallback",
+                }
+            )
+        return pd.DataFrame.from_records(rows)
+
     rows: list[dict[str, Any]] = []
     for profile in get_indicator_package(package):
         match_row, matched_term = _find_indicator_match(connector, profile)
@@ -173,7 +188,7 @@ def resolve_mental_health_indicators(
 
 
 def pull_mental_health_data(
-    connector,
+    connector=None,
     counties: Iterable[str] | str | None = None,
     periods: Iterable[str] | str = "last_12_months",
     package: str = "mns_core",
@@ -197,6 +212,17 @@ def pull_mental_health_data(
         mental-health indicators or organisation units cannot be resolved.
     """
     requested_counties = _resolve_requested_counties(counties)
+    if connector is None:
+        if not fallback_to_demo:
+            raise RuntimeError(
+                "pull_mental_health_data() needs a connector unless demo fallback is enabled."
+            )
+        return _build_demo_mental_health_frame(
+            requested_counties,
+            periods=periods,
+            package=package,
+        )
+
     catalog = resolve_mental_health_indicators(connector, package=package)
     live_catalog = catalog[catalog["available"]].reset_index(drop=True)
 
