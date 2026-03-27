@@ -7,6 +7,7 @@ This repo is set up to deploy the Flask dashboard to Render using the checked-in
 - Make sure your GitHub repo is up to date.
 - Decide whether you want demo data or real KHIS credentials.
 - If you use demo mode, the repo is currently verified against `https://demos.dhis2.org/hmis_dev` as of 2026-03-27.
+- This blueprint now pins `PYTHON_VERSION=3.11.11` because the repo is tested on Python `3.9-3.11`, and Render's current default Python version for newly created services can move independently of that support window.
 
 ## Render Setup
 
@@ -15,9 +16,11 @@ This repo is set up to deploy the Flask dashboard to Render using the checked-in
 3. Connect the GitHub repo and select `khis-toolkit`.
 4. Let Render read [render.yaml](../render.yaml).
 5. Confirm the service name is `khis-toolkit-dashboard`.
-6. Confirm the build command is `pip install -r requirements.txt`.
-7. Confirm the start command is `gunicorn dashboard.app:app`.
-8. Confirm the health check path is `/health`.
+6. Confirm the runtime is Python and the plan is the one you want to use for the first demo.
+7. Confirm the build command is `pip install -r requirements.txt`.
+8. Confirm the start command is `gunicorn dashboard.app:app`.
+9. Confirm the health check path is `/health`.
+10. Confirm the environment variables include `PYTHON_VERSION=3.11.11`.
 
 ## Environment Variables
 
@@ -28,12 +31,14 @@ For demo mode, keep these values:
 - `DHIS2_BASE_URL=https://demos.dhis2.org/hmis_dev`
 - `DHIS2_USERNAME=demo_en`
 - `DHIS2_PASSWORD=District1#`
+- `PYTHON_VERSION=3.11.11`
 
 For real KHIS access, replace them with your Ministry of Health credentials:
 
 - `DHIS2_BASE_URL`
 - `DHIS2_USERNAME`
 - `DHIS2_PASSWORD`
+- Keep `PYTHON_VERSION=3.11.11` unless you have tested a different version locally and in CI.
 
 ## First Deploy
 
