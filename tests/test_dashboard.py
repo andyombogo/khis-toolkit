@@ -206,3 +206,73 @@ def test_dashboard_forecast_endpoint_falls_back_to_observed_series():
     assert len(payload) == 2
     assert payload[0]["is_forecast"] is False
     assert root_response.status_code == 200
+
+
+def test_dashboard_root_handles_empty_loaded_dataset():
+    """The dashboard home page should still render when no county data loaded."""
+    state = DashboardState(
+        data=pd.DataFrame(
+            columns=[
+                "indicator_id",
+                "indicator_name",
+                "org_unit_id",
+                "org_unit_name",
+                "period",
+                "value",
+            ]
+        ),
+        scorecard=pd.DataFrame(
+            columns=[
+                "county",
+                "completeness_score",
+                "outlier_count",
+                "late_reporter",
+                "suspicious_zeros",
+                "overall_quality_grade",
+            ]
+        ),
+        mental_health_data=pd.DataFrame(
+            columns=[
+                "indicator_id",
+                "indicator_name",
+                "indicator_slug",
+                "indicator_domain",
+                "indicator_package",
+                "org_unit_id",
+                "org_unit_name",
+                "period",
+                "value",
+                "data_source",
+            ]
+        ),
+        mental_health_summary=pd.DataFrame(
+            columns=[
+                "county",
+                "latest_period",
+                "tracked_indicators",
+                "latest_total_value",
+                "average_latest_value",
+                "trend_direction",
+                "burden_band",
+                "county_percentile",
+                "data_source",
+            ]
+        ),
+        quality_summary="No quality scorecard is available yet.",
+        indicator_name="Malaria Cases (Offline Demo)",
+        indicator_id="offline_malaria_cases",
+        banner="Offline demo banner",
+        last_updated="2026-03-27 12:00 UTC",
+    )
+
+    with patch("dashboard.app._load_dashboard_state", return_value=state):
+        app = create_app()
+    app.config["TESTING"] = True
+
+    client = app.test_client()
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "No usable series is available for this county yet." in response.get_data(
+        as_text=True
+    )

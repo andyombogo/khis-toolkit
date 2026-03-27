@@ -42,13 +42,15 @@ def create_app() -> Flask:
     def index():
         """Render the main county dashboard page."""
         state = _state(app)
-        selected_county = (
-            request.args.get("county")
-            or state.data["org_unit_name"].dropna().astype(str).iloc[0]
-        )
+        counties_table = khis.list_counties()
+        selected_county = _default_selected_county(state, request.args.get("county"))
         initial_forecast = _forecast_for_county(state, selected_county)
-        trend_chart = create_trend_chart(
-            initial_forecast, county=selected_county, indicator=state.indicator_name
+        trend_chart = (
+            create_trend_chart(
+                initial_forecast, county=selected_county, indicator=state.indicator_name
+            )
+            if not initial_forecast.empty
+            else _empty_trend_chart(selected_county, state.indicator_name)
         )
         latest_values = _latest_county_values(state.data)
         map_object = create_county_map(latest_values, value_col="latest_value")
@@ -63,7 +65,7 @@ def create_app() -> Flask:
             map_html=map_html,
             quality_table=quality_table,
             chart_json=trend_chart.to_json(),
-            counties=khis.list_counties().to_dict(orient="records"),
+            counties=counties_table.to_dict(orient="records"),
             selected_county=selected_county,
             selected_quality=selected_quality,
             selected_mental_health=selected_mental_health,
@@ -364,6 +366,48 @@ def _observed_series_for_county(
             "county",
         ]
     ].sort_values("period", kind="mergesort")
+
+
+def _default_selected_county(
+    state: DashboardState, requested_county: str | None
+) -> str:
+    """Choose a safe county for the dashboard even when the loaded data is empty."""
+    if requested_county and str(requested_county).strip():
+        return _normalise_county_input(str(requested_county))
+
+    if "org_unit_name" in state.data.columns:
+        county_candidates = state.data["org_unit_name"].dropna().astype(str).str.strip()
+        county_candidates = county_candidates[county_candidates != ""]
+        if not county_candidates.empty:
+            return str(county_candidates.iloc[0])
+
+    return str(khis.list_counties().iloc[0]["name"])
+
+
+def _empty_trend_chart(county: str, indicator: str):
+    """Return a readable placeholder chart when no trend data is available."""
+    from plotly import graph_objects as go
+
+    figure = go.Figure()
+    figure.update_layout(
+        title=f"{county}: {indicator}",
+        template="plotly_white",
+        margin={"l": 50, "r": 20, "t": 70, "b": 45},
+        xaxis_title="Period",
+        yaxis_title="Value",
+        annotations=[
+            {
+                "text": "No usable series is available for this county yet.",
+                "xref": "paper",
+                "yref": "paper",
+                "x": 0.5,
+                "y": 0.5,
+                "showarrow": False,
+                "font": {"size": 16, "color": "#64748b"},
+            }
+        ],
+    )
+    return figure
 
 
 def _quality_payload(state: DashboardState, county: str) -> dict[str, object]:
