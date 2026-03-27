@@ -1,0 +1,32 @@
+# Environment and secrets
+.env
+.env.*
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# Model artifacts
+*.joblib
+*.pkl
+
+# Raw data
+data/raw/
+
+# OS clutter
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
