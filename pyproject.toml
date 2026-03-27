@@ -5,12 +5,26 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "khis-toolkit"
 version = "0.1.0"
-description = "Python analytics toolkit for Kenya DHIS2/KHIS health data - county-level cleaning, forecasting, and mapping."
+description = "Python analytics toolkit for Kenya DHIS2/KHIS health data"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [
-  { name = "John Andrew" }
+  { name = "John Andrew", email = "andyombogo@gmail.com" }
+]
+keywords = ["Kenya", "DHIS2", "KHIS", "health", "analytics", "epidemiology", "public health"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Healthcare Industry",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+  "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
 dependencies = [
   "requests>=2.31.0",
@@ -23,6 +37,8 @@ dependencies = [
   "folium>=0.14.0",
   "flask>=3.0.0",
   "gunicorn>=21.0.0",
+  "fastapi>=0.100.0",
+  "uvicorn>=0.23.0",
   "shap>=0.42.0",
   "python-dotenv>=1.0.0",
   "tqdm>=4.65.0",
@@ -33,5 +49,10 @@ dependencies = [
   "black>=23.0.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/andyombogo/khis-toolkit"
+Repository = "https://github.com/andyombogo/khis-toolkit"
+Issues = "https://github.com/andyombogo/khis-toolkit/issues"
+
 [tool.setuptools.packages.find]
-include = ["khis*", "dashboard*"]
+include = ["khis*", "dashboard*", "src*"]

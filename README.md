@@ -1,6 +1,7 @@
 # KHIS Toolkit
 
 ![PyPI Version](https://img.shields.io/pypi/v/khis-toolkit?label=PyPI)
+![pip install khis-toolkit](https://img.shields.io/badge/pip%20install-khis--toolkit-blue)
 ![CI](https://github.com/andyombogo/khis-toolkit/actions/workflows/ci.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)
@@ -48,7 +49,7 @@ forecast = khis.forecast(df_clean, weeks_ahead=4)
 
 ## Live Dashboard
 
-Deployment is configured in [render.yaml](render.yaml). After the first Render deployment, add the live service URL here so county stakeholders can open the dashboard directly.
+Deployment is configured in [render.yaml](render.yaml). Add `FLASK_SECRET_KEY`, `DHIS2_BASE_URL`, `DHIS2_USERNAME`, and `DHIS2_PASSWORD` in Render before the first live deploy, then place the service URL here so county stakeholders can open the dashboard directly.
 
 ## All 47 Kenya Counties Supported
 
