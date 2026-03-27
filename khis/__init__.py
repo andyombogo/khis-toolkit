@@ -9,6 +9,7 @@ from .counties import (
     get_county_coordinates,
     list_counties,
     resolve_org_unit_id,
+    update_from_api,
 )
 from .forecast import forecast_indicator_series
 from .quality import compute_quality_summary
@@ -25,4 +26,5 @@ __all__ = [
     "get_county_coordinates",
     "list_counties",
     "resolve_org_unit_id",
+    "update_from_api",
 ]
