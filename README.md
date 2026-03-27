@@ -28,6 +28,7 @@ Kenya county teams already use DHIS2/KHIS, but the analytics gap remains real: p
 - Cleans KHIS data quirks such as period parsing, duplicate rows, missingness flags, and bounded imputation.
 - Generates county data quality scorecards with completeness, outlier, timeliness, and suspicious-zero checks.
 - Produces Prophet, XGBoost, and ensemble forecasts together with a county-facing Flask dashboard.
+- Adds a mental-health service workflow for curated MNS indicator packages, county summaries, and OHRE-ready downstream integration.
 
 ## Quick Start
 
@@ -45,6 +46,26 @@ df = khis.get(
 )
 df_clean = khis.clean(df)
 forecast = khis.forecast(df_clean, weeks_ahead=4)
+```
+
+## Mental Health Workflow
+
+KHIS Toolkit now includes a Kenya-first mental-health service workflow so you do
+not have to start from a blank notebook when exploring MNS indicators. The
+package uses a curated indicator catalog, attempts to resolve live KHIS matches,
+and falls back to a stable demo frame when public or offline environments do not
+expose mental-health metadata.
+
+```
+import khis
+
+conn = khis.connect()
+mns = khis.pull_mental_health_data(
+    conn,
+    counties=["Nairobi", "Mombasa", "Kisumu"],
+    periods="last_12_months",
+)
+county_summary = khis.summarise_county_mental_health(mns)
 ```
 
 ## Demo Notebooks
@@ -102,7 +123,7 @@ Pull requests are welcome, especially from people who have KHIS access and can h
 ## Roadmap
 
 - Uganda and Tanzania DHIS2 support once the Kenya workflow is stable.
-- A mental health indicator module for county burden tracking and review.
+- Mental health indicator workflow for county burden tracking and review.
 - Automated county health report generation from scorecards and forecasts.
 
 ## License

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Added a Kenya mental-health workflow with curated MNS indicator packages, live KHIS resolution helpers, deterministic demo fallbacks, and county summary utilities.
+- Added FastAPI and Flask dashboard support for county mental-health snapshots alongside the existing malaria-focused workflows.
+- Updated the README, API guide, and roadmap to surface the new mental-health workflow as a first-class public feature.
+
 ## 0.1.0 - 2026-03-27
 
 - Added a DHIS2/KHIS connector with environment-based auth, demo fallback, indicator discovery, org-unit lookup, and analytics pagination.

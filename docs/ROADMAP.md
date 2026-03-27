@@ -19,6 +19,6 @@
 
 ## Product Roadmap
 
-- [ ] Add a mental health indicator workflow alongside malaria-focused examples
+- [x] Add a mental health indicator workflow alongside malaria-focused examples
 - [ ] Expand to Uganda and Tanzania DHIS2 deployments after Kenya stabilises
 - [ ] Generate automated county health review reports from forecasts and scorecards

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from html import escape
 import os
 from urllib.parse import unquote
@@ -21,6 +21,8 @@ class DashboardState:
 
     data: pd.DataFrame
     scorecard: pd.DataFrame
+    mental_health_data: pd.DataFrame
+    mental_health_summary: pd.DataFrame
     quality_summary: str
     indicator_name: str
     indicator_id: str
@@ -53,6 +55,7 @@ def create_app() -> Flask:
         map_html = map_object.get_root().render()
         quality_table = create_quality_table(state.scorecard)
         selected_quality = _quality_payload(state, selected_county)
+        selected_mental_health = _mental_health_payload(state, selected_county)
 
         return render_template_string(
             INDEX_TEMPLATE,
@@ -63,6 +66,7 @@ def create_app() -> Flask:
             counties=khis.list_counties().to_dict(orient="records"),
             selected_county=selected_county,
             selected_quality=selected_quality,
+            selected_mental_health=selected_mental_health,
             indicator_name=state.indicator_name,
             last_updated=state.last_updated,
         )
@@ -98,6 +102,12 @@ def create_app() -> Flask:
         state = _state(app)
         return jsonify(_quality_payload(state, _normalise_county_input(county)))
 
+    @app.get("/api/mental-health/<county>")
+    def api_mental_health(county: str):
+        """Return the mental-health summary row for one selected county."""
+        state = _state(app)
+        return jsonify(_mental_health_payload(state, _normalise_county_input(county)))
+
     @app.get("/health")
     def health():
         """Return a basic dashboard health payload."""
@@ -128,17 +138,30 @@ def _load_dashboard_state() -> DashboardState:
             "Demo using locally generated county sample data because live DHIS2 fetch failed. "
             f"Reason: {exc}"
         )
+        connector = khis.connect()
 
     cleaned = khis.clean(data)
     scorecard, summary = khis.quality_report(cleaned)
+    county_names = (
+        cleaned["org_unit_name"].dropna().astype(str).drop_duplicates().tolist()
+        if "org_unit_name" in cleaned.columns
+        else None
+    )
+    mental_health_data = khis.pull_mental_health_data(
+        connector,
+        counties=county_names,
+    )
+    mental_health_summary = khis.summarise_county_mental_health(mental_health_data)
     return DashboardState(
         data=cleaned,
         scorecard=scorecard,
+        mental_health_data=mental_health_data,
+        mental_health_summary=mental_health_summary,
         quality_summary=summary,
         indicator_name=indicator_name,
         indicator_id=indicator_id,
         banner=banner,
-        last_updated=datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+        last_updated=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
     )
 
 
@@ -295,6 +318,23 @@ def _quality_payload(state: DashboardState, county: str) -> dict[str, object]:
     return payload
 
 
+def _mental_health_payload(state: DashboardState, county: str) -> dict[str, object]:
+    """Return a mental-health snapshot payload for one county."""
+    row = state.mental_health_summary[
+        state.mental_health_summary["county"].astype(str) == str(county)
+    ]
+    snapshot = khis.county_indicator_snapshot(state.mental_health_data, county)
+    if row.empty:
+        return {
+            "county": county,
+            "message": "No mental-health summary is available for this county.",
+            "indicator_snapshot": [],
+        }
+    payload = row.iloc[0].to_dict()
+    payload["indicator_snapshot"] = snapshot.to_dict(orient="records")
+    return payload
+
+
 def _resolve_indicator_name(state: DashboardState, indicator_path_value: str) -> str:
     """Resolve a path parameter into the cached indicator name."""
     candidate = unquote(indicator_path_value).replace("_", " ").strip().lower()
@@ -446,7 +486,7 @@ INDEX_TEMPLATE = """
       <div class="hero">
         <aside class="panel sidebar">
           <h1>KHIS Toolkit</h1>
-          <p>County dashboard for trend review, data quality checks, and short-horizon forecasting.</p>
+          <p>County dashboard for malaria trend review, data quality checks, short-horizon forecasting, and mental-health service monitoring.</p>
           <label for="county-select">County</label>
           <select id="county-select">
             {% for county in counties %}
@@ -463,6 +503,13 @@ INDEX_TEMPLATE = """
             <div><strong>Grade:</strong> {{ selected_quality.overall_quality_grade }}</div>
             <div><strong>Late reporter:</strong> {{ 'Yes' if selected_quality.late_reporter else 'No' }}</div>
             <div><strong>Suspicious zeros:</strong> {{ 'Yes' if selected_quality.suspicious_zeros else 'No' }}</div>
+          </div>
+          <div class="detail-card" id="mental-health-detail">
+            <div><strong>Mental Health:</strong> {{ selected_mental_health.burden_band or 'N/A' }}</div>
+            <div><strong>Tracked indicators:</strong> {{ selected_mental_health.tracked_indicators or 'N/A' }}</div>
+            <div><strong>Latest total:</strong> {{ selected_mental_health.latest_total_value or 'N/A' }}</div>
+            <div><strong>Trend:</strong> {{ selected_mental_health.trend_direction or 'N/A' }}</div>
+            <div><strong>Data source:</strong> {{ selected_mental_health.data_source or 'N/A' }}</div>
           </div>
         </aside>
         <main class="content">
@@ -540,6 +587,16 @@ INDEX_TEMPLATE = """
           <div><strong>Grade:</strong> ${quality.overall_quality_grade ?? 'N/A'}</div>
           <div><strong>Late reporter:</strong> ${quality.late_reporter ? 'Yes' : 'No'}</div>
           <div><strong>Suspicious zeros:</strong> ${quality.suspicious_zeros ? 'Yes' : 'No'}</div>
+        `;
+
+        const mentalHealthResponse = await fetch(`/api/mental-health/${encodeURIComponent(county)}`);
+        const mentalHealth = await mentalHealthResponse.json();
+        document.getElementById('mental-health-detail').innerHTML = `
+          <div><strong>Mental Health:</strong> ${mentalHealth.burden_band ?? 'N/A'}</div>
+          <div><strong>Tracked indicators:</strong> ${mentalHealth.tracked_indicators ?? 'N/A'}</div>
+          <div><strong>Latest total:</strong> ${mentalHealth.latest_total_value ?? 'N/A'}</div>
+          <div><strong>Trend:</strong> ${mentalHealth.trend_direction ?? 'N/A'}</div>
+          <div><strong>Data source:</strong> ${mentalHealth.data_source ?? 'N/A'}</div>
         `;
       }
 

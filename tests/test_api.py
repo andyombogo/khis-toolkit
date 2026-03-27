@@ -31,9 +31,50 @@ def _cached_state() -> CachedAPIState:
             "overall_quality_grade": ["A"],
         }
     )
+    mental_health_data = pd.DataFrame(
+        {
+            "indicator_id": [
+                "demo_mental_health_outpatient_visits",
+                "demo_psychosocial_support_sessions",
+            ],
+            "indicator_name": [
+                "Mental Health Outpatient Visits",
+                "Psychosocial Support Sessions",
+            ],
+            "indicator_slug": [
+                "mental_health_outpatient_visits",
+                "psychosocial_support_sessions",
+            ],
+            "indicator_domain": [
+                "Mental health services",
+                "Psychosocial support",
+            ],
+            "indicator_package": ["mns_core", "mns_core"],
+            "org_unit_id": ["KE47", "KE47"],
+            "org_unit_name": ["Nairobi", "Nairobi"],
+            "period": [periods[-1], periods[-1]],
+            "value": [18.0, 11.0],
+            "data_source": ["demo_fallback", "demo_fallback"],
+        }
+    )
+    mental_health_summary = pd.DataFrame(
+        {
+            "county": ["Nairobi"],
+            "latest_period": ["2024-12-01"],
+            "tracked_indicators": [2],
+            "latest_total_value": [29.0],
+            "average_latest_value": [14.5],
+            "trend_direction": ["Rising"],
+            "burden_band": ["High"],
+            "county_percentile": [1.0],
+            "data_source": ["demo_fallback"],
+        }
+    )
     return CachedAPIState(
         data=data,
         scorecard=scorecard,
+        mental_health_data=mental_health_data,
+        mental_health_summary=mental_health_summary,
         summary="Reviewed 1 counties. 1 counties scored A or B, while 0 counties scored D or F. 0 counties were late reporters and 0 showed suspicious zero patterns.",
         indicator_name="Malaria Cases (Offline Demo)",
         indicator_id="offline_malaria_cases",
@@ -69,12 +110,14 @@ def test_counties_endpoint_requires_api_key_when_configured():
 
 
 def test_quality_and_forecast_endpoints_use_cached_state():
-    """Quality and forecast endpoints should serve the cached offline state when needed."""
+    """Quality, forecast, and mental-health endpoints should use cached state."""
     app = create_app(api_key=None)
     app.state.cached_state = _cached_state()
     client = TestClient(app)
 
     quality = client.get("/quality/Nairobi")
+    mental_health = client.get("/mental-health/Nairobi")
+    mental_health_summary = client.get("/mental-health/summary")
     forecast = client.post(
         "/forecast",
         json={
@@ -87,5 +130,10 @@ def test_quality_and_forecast_endpoints_use_cached_state():
 
     assert quality.status_code == 200
     assert quality.json()["county"] == "Nairobi"
+    assert mental_health.status_code == 200
+    assert mental_health.json()["burden_band"] == "High"
+    assert len(mental_health.json()["indicator_snapshot"]) == 2
+    assert mental_health_summary.status_code == 200
+    assert mental_health_summary.json()[0]["county"] == "Nairobi"
     assert forecast.status_code == 200
     assert len(forecast.json()) >= 2

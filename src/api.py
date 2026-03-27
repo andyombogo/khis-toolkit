@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 import os
 from typing import Annotated, Any
 from urllib.parse import unquote
@@ -39,6 +39,8 @@ class CachedAPIState:
 
     data: pd.DataFrame
     scorecard: pd.DataFrame
+    mental_health_data: pd.DataFrame
+    mental_health_summary: pd.DataFrame
     summary: str
     indicator_name: str
     indicator_id: str
@@ -159,6 +161,27 @@ def create_app(api_key: str | None = None) -> FastAPI:
         payload["indicator"] = state.indicator_name
         return payload
 
+    @app.get("/mental-health/indicators", dependencies=[Depends(require_api_key)])
+    def mental_health_indicators() -> list[dict[str, Any]]:
+        """Return the curated mental-health indicator package with live availability."""
+        connector = khis.connect()
+        return khis.resolve_mental_health_indicators(connector).to_dict(
+            orient="records"
+        )
+
+    @app.get("/mental-health/summary", dependencies=[Depends(require_api_key)])
+    def mental_health_summary() -> list[dict[str, Any]]:
+        """Return the cached county-level mental-health summary table."""
+        state = _ensure_cached_state(app)
+        return state.mental_health_summary.to_dict(orient="records")
+
+    @app.get("/mental-health/{county}", dependencies=[Depends(require_api_key)])
+    def mental_health_county(county: str) -> dict[str, Any]:
+        """Return one county's mental-health summary and latest indicator snapshot."""
+        state = _ensure_cached_state(app)
+        county_name = _resolve_county_name(county)
+        return _mental_health_payload(state, county_name)
+
     return app
 
 
@@ -184,16 +207,29 @@ def _load_cached_state() -> CachedAPIState:
         banner = (
             f"Offline demo fallback was used because live data loading failed: {exc}"
         )
+        connector = khis.connect()
 
     cleaned = khis.clean(data)
     scorecard, summary = khis.quality_report(cleaned)
+    county_names = (
+        cleaned["org_unit_name"].dropna().astype(str).drop_duplicates().tolist()
+        if "org_unit_name" in cleaned.columns
+        else None
+    )
+    mental_health_data = khis.pull_mental_health_data(
+        connector,
+        counties=county_names,
+    )
+    mental_health_summary = khis.summarise_county_mental_health(mental_health_data)
     return CachedAPIState(
         data=cleaned,
         scorecard=scorecard,
+        mental_health_data=mental_health_data,
+        mental_health_summary=mental_health_summary,
         summary=summary,
         indicator_name=indicator_name,
         indicator_id=indicator_id,
-        last_updated=datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+        last_updated=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
         banner=banner,
     )
 
@@ -367,6 +403,27 @@ def _resolve_county_name(value: str) -> str:
         return khis.get_county(candidate)["name"]
     except ValueError:
         return candidate
+
+
+def _mental_health_payload(
+    state: CachedAPIState,
+    county_name: str,
+) -> dict[str, Any]:
+    """Return one county's mental-health summary plus latest indicator breakdown."""
+    summary_row = state.mental_health_summary[
+        state.mental_health_summary["county"].astype(str) == county_name
+    ]
+    snapshot = khis.county_indicator_snapshot(state.mental_health_data, county_name)
+    if summary_row.empty:
+        return {
+            "county": county_name,
+            "message": "No mental-health summary is available for this county.",
+            "indicator_snapshot": [],
+        }
+
+    payload = summary_row.iloc[0].to_dict()
+    payload["indicator_snapshot"] = snapshot.to_dict(orient="records")
+    return payload
 
 
 app = create_app()

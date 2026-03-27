@@ -47,3 +47,10 @@ def test_get_resolves_indicator_search_terms_before_fetching():
 
     assert result["indicator_ids"] == ["IND_MALARIA"]
     assert result["org_unit_ids"] == ["OU_NAIROBI"]
+
+
+def test_public_api_exposes_mental_health_helpers():
+    """The top-level package should export the new mental-health workflow."""
+    assert callable(khis.list_mental_health_indicators)
+    assert callable(khis.pull_mental_health_data)
+    assert callable(khis.summarise_county_mental_health)

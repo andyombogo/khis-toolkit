@@ -3,8 +3,8 @@
 This package is designed for Kenya Health Records Officers and analysts who
 work with DHIS2/KHIS data and need a straightforward workflow: connect to the
 server, fetch county indicator data, clean the common reporting issues, review
-data quality, and prepare simple forecasts or dashboards without stitching the
-pieces together by hand.
+data quality, prepare simple forecasts, and now explore mental-health service
+signals without stitching the pieces together by hand.
 """
 
 from __future__ import annotations
@@ -44,6 +44,15 @@ from .forecast import (
     plot_forecast,
     prophet_forecast,
     xgboost_forecast,
+)
+from .mental_health import (
+    MENTAL_HEALTH_INDICATOR_CATALOG,
+    county_indicator_snapshot,
+    get_indicator_package,
+    list_mental_health_indicators,
+    pull_mental_health_data,
+    resolve_mental_health_indicators,
+    summarise_county_mental_health,
 )
 from .quality import (
     completeness_score,
@@ -158,17 +167,24 @@ __all__ = [
     "get_county_coordinates",
     "list_indicators",
     "list_counties",
+    "list_mental_health_indicators",
     "outlier_report",
     "plot_forecast",
     "plot_quality_heatmap",
     "prophet_forecast",
+    "pull_mental_health_data",
     "quality_report",
+    "resolve_mental_health_indicators",
     "resolve_org_unit_id",
+    "MENTAL_HEALTH_INDICATOR_CATALOG",
     "standardise_county_names",
+    "summarise_county_mental_health",
     "timeliness_report",
     "update_from_api",
     "xgboost_forecast",
     "zero_report_analysis",
+    "county_indicator_snapshot",
+    "get_indicator_package",
 ]
 
 
