@@ -12,7 +12,14 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
-from .cleaner import clean, clean_indicator_frame, fill_missing, flag_missing, full_pipeline, standardise_county_names
+from .cleaner import (
+    clean,
+    clean_indicator_frame,
+    fill_missing,
+    flag_missing,
+    full_pipeline,
+    standardise_county_names,
+)
 from .connector import DHIS2Connector
 from .counties import (
     KENYA_COUNTIES,
@@ -22,6 +29,12 @@ from .counties import (
     list_counties,
     resolve_org_unit_id,
     update_from_api,
+)
+from .demo import (
+    DEMO_ANALYTICS_PERIODS,
+    build_demo_indicator_frame,
+    get_demo_indicators,
+    get_demo_org_units,
 )
 from .forecast import (
     anomaly_detection,
@@ -78,19 +91,27 @@ def get(
     connector = conn or connect(base_url=base_url, username=username, password=password)
     indicator_ids = indicator
     if indicator_ids is None:
-        raise ValueError("Pass an indicator ID or iterable of indicator IDs via 'indicator'.")
+        raise ValueError(
+            "Pass an indicator ID or iterable of indicator IDs via 'indicator'."
+        )
     resolved_indicator_ids = _resolve_indicator_ids(connector, indicator_ids)
 
     resolved_org_units = _coerce_to_string_list(org_unit_ids)
-    requested_counties = _coerce_to_string_list(counties) + _coerce_to_string_list(county)
+    requested_counties = _coerce_to_string_list(counties) + _coerce_to_string_list(
+        county
+    )
     for county_name in requested_counties:
         try:
-            resolved_org_units.append(connector.resolve_org_unit_id_by_name(county_name))
+            resolved_org_units.append(
+                connector.resolve_org_unit_id_by_name(county_name)
+            )
         except (ConnectionError, PermissionError, RuntimeError, ValueError):
             resolved_org_units.append(resolve_org_unit_id(county_name))
 
     if not resolved_org_units:
-        raise ValueError("Pass county/counties or org_unit_ids when calling khis.get().")
+        raise ValueError(
+            "Pass county/counties or org_unit_ids when calling khis.get()."
+        )
 
     return connector.get_analytics(
         indicator_ids=resolved_indicator_ids,
@@ -112,8 +133,10 @@ def forecast(df: Any, weeks_ahead: int = 4, **kwargs: Any) -> Any:
 
 __all__ = [
     "DHIS2Connector",
+    "DEMO_ANALYTICS_PERIODS",
     "KENYA_COUNTIES",
     "anomaly_detection",
+    "build_demo_indicator_frame",
     "clean",
     "clean_indicator_frame",
     "connect",
@@ -128,6 +151,8 @@ __all__ = [
     "forecast_indicator_series",
     "full_pipeline",
     "get",
+    "get_demo_indicators",
+    "get_demo_org_units",
     "get_counties_by_region",
     "get_county",
     "get_county_coordinates",

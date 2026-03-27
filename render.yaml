@@ -1,15 +1,16 @@
 services:
   - type: web
-    name: khis-toolkit
+    name: khis-toolkit-dashboard
     env: python
-    buildCommand: pip install -r requirements.txt && pip install -e .
+    buildCommand: pip install -r requirements.txt
     startCommand: gunicorn dashboard.app:app
+    healthCheckPath: /health
     envVars:
       - key: FLASK_SECRET_KEY
         generateValue: true
       - key: DHIS2_BASE_URL
-        sync: false
+        value: https://demos.dhis2.org/hmis_dev
       - key: DHIS2_USERNAME
-        sync: false
+        value: demo_en
       - key: DHIS2_PASSWORD
-        sync: false
+        value: District1#

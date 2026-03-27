@@ -18,7 +18,12 @@ def test_completeness_score_classifies_county_indicator_series():
     df = pd.DataFrame(
         {
             "org_unit_name": ["Nairobi", "Nairobi", "Nairobi", "Mombasa"],
-            "indicator_name": ["Malaria Cases", "Malaria Cases", "Malaria Cases", "Malaria Cases"],
+            "indicator_name": [
+                "Malaria Cases",
+                "Malaria Cases",
+                "Malaria Cases",
+                "Malaria Cases",
+            ],
             "value": [10, None, 12, 8],
         }
     )
@@ -58,7 +63,10 @@ def test_county_scorecard_returns_county_summary_and_text():
 
     scorecard, summary = county_scorecard(df)
 
-    assert {"county", "completeness_score", "outlier_count", "overall_quality_grade"}.issubset(
-        scorecard.columns
-    )
+    assert {
+        "county",
+        "completeness_score",
+        "outlier_count",
+        "overall_quality_grade",
+    }.issubset(scorecard.columns)
     assert "Reviewed 2 counties" in summary

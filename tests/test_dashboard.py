@@ -54,5 +54,7 @@ def test_create_trend_chart_returns_plotly_figure():
         }
     )
 
-    figure = create_trend_chart(forecast_df, county="Nairobi", indicator="Malaria Cases")
+    figure = create_trend_chart(
+        forecast_df, county="Nairobi", indicator="Malaria Cases"
+    )
     assert figure.layout.title.text == "Nairobi: Malaria Cases"

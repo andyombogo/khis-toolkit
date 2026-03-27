@@ -67,7 +67,9 @@ def prophet_forecast(
         weekly_seasonality=(freq.upper() == "W"),
         daily_seasonality=False,
         interval_width=0.8,
-        holidays=_kenya_holidays(model_df["ds"], periods_ahead=periods_ahead, freq=freq),
+        holidays=_kenya_holidays(
+            model_df["ds"], periods_ahead=periods_ahead, freq=freq
+        ),
     )
     model.fit(model_df)
 
@@ -89,7 +91,9 @@ def prophet_forecast(
     history_map = series.df.set_index("period")["value"]
     result["actual"] = result["period"].map(history_map)
     result["is_forecast"] = ~result["period"].isin(series.df["period"])
-    return result[["period", "actual", "forecast", "lower_bound", "upper_bound", "is_forecast"]]
+    return result[
+        ["period", "actual", "forecast", "lower_bound", "upper_bound", "is_forecast"]
+    ]
 
 
 def xgboost_forecast(
@@ -158,7 +162,9 @@ def xgboost_forecast(
     )
 
     combined = pd.concat([history_result, future_rows], ignore_index=True)
-    return combined[["period", "actual", "forecast", "lower_bound", "upper_bound", "is_forecast"]]
+    return combined[
+        ["period", "actual", "forecast", "lower_bound", "upper_bound", "is_forecast"]
+    ]
 
 
 def ensemble_forecast(
@@ -173,7 +179,9 @@ def ensemble_forecast(
         indicator=indicator,
         county=county,
         periods_ahead=periods_ahead,
-        freq=_infer_freq(_prepare_series(df, indicator=indicator, county=county).df["period"]),
+        freq=_infer_freq(
+            _prepare_series(df, indicator=indicator, county=county).df["period"]
+        ),
     )
     xgb_result = xgboost_forecast(
         df,
@@ -189,8 +197,13 @@ def ensemble_forecast(
         suffixes=("_prophet", "_xgb"),
     ).sort_values("period", kind="mergesort")
 
-    combined["actual"] = combined["actual_prophet"].combine_first(combined["actual_xgb"])
-    combined["forecast"] = combined["forecast_prophet"].fillna(0) * 0.6 + combined["forecast_xgb"].fillna(0) * 0.4
+    combined["actual"] = combined["actual_prophet"].combine_first(
+        combined["actual_xgb"]
+    )
+    combined["forecast"] = (
+        combined["forecast_prophet"].fillna(0) * 0.6
+        + combined["forecast_xgb"].fillna(0) * 0.4
+    )
     combined["lower_bound"] = (
         combined["lower_bound_prophet"].fillna(combined["forecast"]) * 0.6
         + combined["lower_bound_xgb"].fillna(combined["forecast"]) * 0.4
@@ -199,7 +212,9 @@ def ensemble_forecast(
         combined["upper_bound_prophet"].fillna(combined["forecast"]) * 0.6
         + combined["upper_bound_xgb"].fillna(combined["forecast"]) * 0.4
     )
-    combined["is_forecast"] = combined["is_forecast_prophet"].fillna(False) | combined["is_forecast_xgb"].fillna(False)
+    combined["is_forecast"] = combined["is_forecast_prophet"].fillna(False) | combined[
+        "is_forecast_xgb"
+    ].fillna(False)
 
     return combined[
         ["period", "actual", "forecast", "lower_bound", "upper_bound", "is_forecast"]
@@ -242,7 +257,15 @@ def forecast_all_counties(
 
     if not results:
         return pd.DataFrame(
-            columns=["county", "period", "actual", "forecast", "lower_bound", "upper_bound", "is_forecast"]
+            columns=[
+                "county",
+                "period",
+                "actual",
+                "forecast",
+                "lower_bound",
+                "upper_bound",
+                "is_forecast",
+            ]
         )
 
     return pd.concat(results, ignore_index=True)
@@ -327,12 +350,13 @@ def anomaly_detection(df: pd.DataFrame, indicator: str, county: str) -> pd.DataF
         indicator=indicator,
         county=county,
         periods_ahead=4,
-        freq=_infer_freq(_prepare_series(df, indicator=indicator, county=county).df["period"]),
+        freq=_infer_freq(
+            _prepare_series(df, indicator=indicator, county=county).df["period"]
+        ),
     )
     anomalies = forecast_df[~forecast_df["is_forecast"]].copy()
-    anomalies["anomaly_flag"] = (
-        (anomalies["actual"] < anomalies["lower_bound"])
-        | (anomalies["actual"] > anomalies["upper_bound"])
+    anomalies["anomaly_flag"] = (anomalies["actual"] < anomalies["lower_bound"]) | (
+        anomalies["actual"] > anomalies["upper_bound"]
     )
     return anomalies
 
@@ -349,7 +373,9 @@ def forecast_indicator_series(
     if weeks_ahead is not None:
         periods_ahead = weeks_ahead
 
-    resolved_indicator, resolved_county = _resolve_series_identity(df, indicator=indicator, county=county)
+    resolved_indicator, resolved_county = _resolve_series_identity(
+        df, indicator=indicator, county=county
+    )
     forecast_fn = _forecast_method(method)
     return forecast_fn(
         df,
@@ -382,15 +408,27 @@ def _resolve_series_identity(
     indicator_column = _indicator_column(df)
 
     if county is None:
-        counties = [value for value in df[county_column].dropna().astype(str).unique() if value.strip()]
+        counties = [
+            value
+            for value in df[county_column].dropna().astype(str).unique()
+            if value.strip()
+        ]
         if len(counties) != 1:
-            raise ValueError("Pass county explicitly when the DataFrame contains multiple counties.")
+            raise ValueError(
+                "Pass county explicitly when the DataFrame contains multiple counties."
+            )
         county = counties[0]
 
     if indicator is None:
-        indicators = [value for value in df[indicator_column].dropna().astype(str).unique() if value.strip()]
+        indicators = [
+            value
+            for value in df[indicator_column].dropna().astype(str).unique()
+            if value.strip()
+        ]
         if len(indicators) != 1:
-            raise ValueError("Pass indicator explicitly when the DataFrame contains multiple indicators.")
+            raise ValueError(
+                "Pass indicator explicitly when the DataFrame contains multiple indicators."
+            )
         indicator = indicators[0]
 
     return indicator, county
@@ -407,13 +445,19 @@ def _prepare_series(df: pd.DataFrame, indicator: str, county: str) -> SeriesCont
     working["period"] = pd.to_datetime(working["period"], errors="coerce")
     working["value"] = pd.to_numeric(working["value"], errors="coerce")
 
-    filtered = working[
-        (working[county_column].astype(str) == str(county))
-        & (working[indicator_column].astype(str) == str(indicator))
-    ][["period", "value"]].dropna(subset=["period"]).copy()
+    filtered = (
+        working[
+            (working[county_column].astype(str) == str(county))
+            & (working[indicator_column].astype(str) == str(indicator))
+        ][["period", "value"]]
+        .dropna(subset=["period"])
+        .copy()
+    )
 
     if filtered.empty:
-        raise ValueError(f"No data found for county='{county}' and indicator='{indicator}'.")
+        raise ValueError(
+            f"No data found for county='{county}' and indicator='{indicator}'."
+        )
 
     filtered = (
         filtered.groupby("period", as_index=False)["value"]
@@ -447,7 +491,9 @@ def _trend_fallback_forecast(
     working["week_of_year"] = working["period"].dt.isocalendar().week.astype(int)
 
     features = pd.get_dummies(
-        working[["time_index", "month", "quarter", "week_of_year"]].astype({"month": str, "quarter": str, "week_of_year": str}),
+        working[["time_index", "month", "quarter", "week_of_year"]].astype(
+            {"month": str, "quarter": str, "week_of_year": str}
+        ),
         drop_first=False,
     )
     model = LinearRegression()
@@ -456,14 +502,20 @@ def _trend_fallback_forecast(
 
     residual_std = max(float((working["value"] - fitted).std(ddof=0)), 1.0)
 
-    future_periods = _future_periods(working["period"], periods_ahead=periods_ahead, freq=freq)
-    future_time_index = np.arange(len(working), len(working) + len(future_periods), dtype=float)
+    future_periods = _future_periods(
+        working["period"], periods_ahead=periods_ahead, freq=freq
+    )
+    future_time_index = np.arange(
+        len(working), len(working) + len(future_periods), dtype=float
+    )
     future_features = pd.DataFrame(
         {
             "time_index": future_time_index,
             "month": future_periods.dt.month.astype(str),
             "quarter": future_periods.dt.quarter.astype(str),
-            "week_of_year": future_periods.dt.isocalendar().week.astype(int).astype(str),
+            "week_of_year": future_periods.dt.isocalendar()
+            .week.astype(int)
+            .astype(str),
         }
     )
     future_features = pd.get_dummies(future_features, drop_first=False)
@@ -500,8 +552,12 @@ def _build_xgboost_training_frame(series_df: pd.DataFrame) -> pd.DataFrame:
     working["lag_2"] = working["value"].shift(2)
     working["lag_3"] = working["value"].shift(3)
     working["lag_4"] = working["value"].shift(4)
-    working["rolling_mean_3"] = working["value"].shift(1).rolling(window=3, min_periods=3).mean()
-    working["rolling_mean_6"] = working["value"].shift(1).rolling(window=6, min_periods=6).mean()
+    working["rolling_mean_3"] = (
+        working["value"].shift(1).rolling(window=3, min_periods=3).mean()
+    )
+    working["rolling_mean_6"] = (
+        working["value"].shift(1).rolling(window=6, min_periods=6).mean()
+    )
     working["time_index"] = np.arange(len(working), dtype=float)
     working["month"] = working["period"].dt.month
     working["quarter"] = working["period"].dt.quarter
@@ -523,7 +579,9 @@ def _recursive_xgboost_forecast(
     future_rows: list[dict[str, object]] = []
 
     for _ in range(periods_ahead):
-        next_period = _future_periods(history["period"], periods_ahead=1, freq=freq).iloc[0]
+        next_period = _future_periods(
+            history["period"], periods_ahead=1, freq=freq
+        ).iloc[0]
         next_features = _build_next_xgb_features(history, next_period)
         next_prediction = float(model.predict(next_features)[0])
         future_rows.append(
@@ -547,7 +605,9 @@ def _recursive_xgboost_forecast(
     return pd.DataFrame(future_rows)
 
 
-def _build_next_xgb_features(history: pd.DataFrame, next_period: pd.Timestamp) -> pd.DataFrame:
+def _build_next_xgb_features(
+    history: pd.DataFrame, next_period: pd.Timestamp
+) -> pd.DataFrame:
     """Construct the next-step lag feature row for recursive XGBoost forecasting."""
     values = history["value"].tolist()
     recent = values[-6:]
@@ -561,7 +621,13 @@ def _build_next_xgb_features(history: pd.DataFrame, next_period: pd.Timestamp) -
             "lag_2": [lag_values[1]],
             "lag_3": [lag_values[2]],
             "lag_4": [lag_values[3]],
-            "rolling_mean_3": [float(np.mean(recent[-3:])) if len(recent) >= 3 else float(np.mean(recent))],
+            "rolling_mean_3": [
+                (
+                    float(np.mean(recent[-3:]))
+                    if len(recent) >= 3
+                    else float(np.mean(recent))
+                )
+            ],
             "rolling_mean_6": [float(np.mean(recent))],
             "time_index": [float(len(history))],
             "month": [int(next_period.month)],
@@ -620,19 +686,41 @@ def _holiday_years(start_year: int, end_year: int) -> tuple[int, ...]:
 def _kenya_holidays(periods: pd.Series, periods_ahead: int, freq: str) -> pd.DataFrame:
     """Build a fixed-date Kenya holiday table for Prophet models."""
     start_year = int(pd.to_datetime(periods).min().year)
-    end_year = int(_future_periods(pd.Series([pd.to_datetime(periods).max()]), periods_ahead, freq).max().year)
+    end_year = int(
+        _future_periods(pd.Series([pd.to_datetime(periods).max()]), periods_ahead, freq)
+        .max()
+        .year
+    )
 
     rows: list[dict[str, object]] = []
     for year in _holiday_years(start_year, end_year):
         rows.extend(
             [
                 {"holiday": "New Year", "ds": pd.Timestamp(year=year, month=1, day=1)},
-                {"holiday": "Labour Day", "ds": pd.Timestamp(year=year, month=5, day=1)},
-                {"holiday": "Madaraka Day", "ds": pd.Timestamp(year=year, month=6, day=1)},
-                {"holiday": "Mashujaa Day", "ds": pd.Timestamp(year=year, month=10, day=20)},
-                {"holiday": "Jamhuri Day", "ds": pd.Timestamp(year=year, month=12, day=12)},
-                {"holiday": "Christmas Day", "ds": pd.Timestamp(year=year, month=12, day=25)},
-                {"holiday": "Boxing Day", "ds": pd.Timestamp(year=year, month=12, day=26)},
+                {
+                    "holiday": "Labour Day",
+                    "ds": pd.Timestamp(year=year, month=5, day=1),
+                },
+                {
+                    "holiday": "Madaraka Day",
+                    "ds": pd.Timestamp(year=year, month=6, day=1),
+                },
+                {
+                    "holiday": "Mashujaa Day",
+                    "ds": pd.Timestamp(year=year, month=10, day=20),
+                },
+                {
+                    "holiday": "Jamhuri Day",
+                    "ds": pd.Timestamp(year=year, month=12, day=12),
+                },
+                {
+                    "holiday": "Christmas Day",
+                    "ds": pd.Timestamp(year=year, month=12, day=25),
+                },
+                {
+                    "holiday": "Boxing Day",
+                    "ds": pd.Timestamp(year=year, month=12, day=26),
+                },
             ]
         )
     return pd.DataFrame(rows)
@@ -651,4 +739,6 @@ def _indicator_column(df: pd.DataFrame) -> str:
     for candidate in ("indicator", "indicator_name", "indicator_id"):
         if candidate in df.columns:
             return candidate
-    raise ValueError("Expected an 'indicator', 'indicator_name', or 'indicator_id' column for forecasting.")
+    raise ValueError(
+        "Expected an 'indicator', 'indicator_name', or 'indicator_id' column for forecasting."
+    )

@@ -10,3 +10,5 @@
 - Added a Flask dashboard with county map helpers, trend charts, scorecard rendering, and demo/live data fallbacks.
 - Added a FastAPI service layer for counties, indicators, cleaned data pulls, forecasts, and quality responses.
 - Added packaging, CI, Render deployment configuration, notebooks, docs, and release-preparation assets.
+- Updated the public DHIS2 demo fallback to the working HMIS demo instance verified on 2026-03-27.
+- Added demo-safe notebook helpers plus deploy, checklist, and launch docs for the initial release.

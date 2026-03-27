@@ -27,7 +27,9 @@ def test_get_resolves_indicator_search_terms_before_fetching():
         def resolve_org_unit_id_by_name(self, name):
             return "OU_NAIROBI"
 
-        def get_analytics(self, indicator_ids, org_unit_ids, periods, output_format="dataframe"):
+        def get_analytics(
+            self, indicator_ids, org_unit_ids, periods, output_format="dataframe"
+        ):
             return {
                 "indicator_ids": indicator_ids,
                 "org_unit_ids": org_unit_ids,

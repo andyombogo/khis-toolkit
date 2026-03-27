@@ -48,7 +48,13 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
 
     duplicate_subset = [
         column
-        for column in ("indicator_id", "indicator_name", "org_unit_id", "org_unit_name", "period")
+        for column in (
+            "indicator_id",
+            "indicator_name",
+            "org_unit_id",
+            "org_unit_name",
+            "period",
+        )
         if column in cleaned.columns
     ]
     if duplicate_subset:
@@ -77,7 +83,11 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
         if bool(negative_mask.any()):
             cleaned.loc[negative_mask, "value"] = pd.NA
 
-    sort_columns = [column for column in ("org_unit_name", "indicator_name", "period") if column in cleaned.columns]
+    sort_columns = [
+        column
+        for column in ("org_unit_name", "indicator_name", "period")
+        if column in cleaned.columns
+    ]
     if sort_columns:
         cleaned = cleaned.sort_values(sort_columns, kind="mergesort")
 
@@ -149,14 +159,22 @@ def fill_missing(df: pd.DataFrame, method: str = "interpolate") -> pd.DataFrame:
 
     county_column = _first_present_column(filled, COUNTY_COLUMNS)
     indicator_column = _first_present_column(filled, INDICATOR_COLUMNS)
-    sort_columns = [column for column in (county_column, indicator_column, "period") if column in filled.columns]
+    sort_columns = [
+        column
+        for column in (county_column, indicator_column, "period")
+        if column in filled.columns
+    ]
     if sort_columns:
-        filled = filled.sort_values(sort_columns, kind="mergesort").reset_index(drop=True)
+        filled = filled.sort_values(sort_columns, kind="mergesort").reset_index(
+            drop=True
+        )
 
     if method == "none":
         return filled
 
-    for _, group_index in filled.groupby([county_column, indicator_column], dropna=False).groups.items():
+    for _, group_index in filled.groupby(
+        [county_column, indicator_column], dropna=False
+    ).groups.items():
         group_series = filled.loc[group_index, "value"]
         filled_series = _fill_series(group_series, method)
         imputed_mask = group_series.isna() & filled_series.notna()
@@ -271,12 +289,16 @@ def _parse_period_value(value: object) -> pd.Timestamp | pd.NaT:
 
     try:
         if re.fullmatch(r"\d{6}", raw_value):
-            return pd.Timestamp(year=int(raw_value[:4]), month=int(raw_value[4:6]), day=1)
+            return pd.Timestamp(
+                year=int(raw_value[:4]), month=int(raw_value[4:6]), day=1
+            )
         if re.fullmatch(r"\d{4}", raw_value):
             return pd.Timestamp(year=int(raw_value), month=1, day=1)
         if re.fullmatch(r"\d{4}Q[1-4]", raw_value):
             quarter = int(raw_value[-1])
-            return pd.Timestamp(year=int(raw_value[:4]), month=((quarter - 1) * 3) + 1, day=1)
+            return pd.Timestamp(
+                year=int(raw_value[:4]), month=((quarter - 1) * 3) + 1, day=1
+            )
         if re.fullmatch(r"\d{4}W\d{1,2}", raw_value):
             year = int(raw_value[:4])
             week = int(raw_value.split("W", maxsplit=1)[1])

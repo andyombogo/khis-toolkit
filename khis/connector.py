@@ -16,9 +16,9 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 
-DEMO_BASE_URL = "https://play.dhis2.org/demo"
-DEMO_USERNAME = "admin"
-DEMO_PASSWORD = "district"
+DEMO_BASE_URL = "https://demos.dhis2.org/hmis_dev"
+DEMO_USERNAME = "demo_en"
+DEMO_PASSWORD = "District1#"
 REQUEST_DELAY_SECONDS = 0.5
 REQUEST_TIMEOUT_SECONDS = 30
 NO_CREDENTIALS_WARNING = (
@@ -113,7 +113,9 @@ class DHIS2Connector:
         except (ConnectionError, PermissionError, RuntimeError) as exc:
             return False, str(exc)
 
-        user_name = payload.get("displayName") or payload.get("username") or self.username
+        user_name = (
+            payload.get("displayName") or payload.get("username") or self.username
+        )
         return True, f"Connected to DHIS2 server at {self.base_url} as {user_name}."
 
     def get_analytics(
@@ -156,7 +158,9 @@ class DHIS2Connector:
         RuntimeError
             If the DHIS2 API returns another HTTP or parsing error.
         """
-        indicator_values = self._normalise_dimension_values(indicator_ids, "indicator_ids")
+        indicator_values = self._normalise_dimension_values(
+            indicator_ids, "indicator_ids"
+        )
         org_unit_values = self._normalise_dimension_values(org_unit_ids, "org_unit_ids")
         period_values = self._normalise_periods(periods)
 
@@ -204,7 +208,9 @@ class DHIS2Connector:
         if search_term:
             params["filter"] = f"displayName:ilike:{search_term}"
 
-        indicator_rows = self._get_paginated_collection("/indicators", params, "indicators")
+        indicator_rows = self._get_paginated_collection(
+            "/indicators", params, "indicators"
+        )
         records = [
             {
                 "id": row.get("id"),
@@ -215,7 +221,9 @@ class DHIS2Connector:
             }
             for row in indicator_rows
         ]
-        return pd.DataFrame(records, columns=["id", "name", "short_name", "code", "description"])
+        return pd.DataFrame(
+            records, columns=["id", "name", "short_name", "code", "description"]
+        )
 
     def get_org_units(
         self,
@@ -296,7 +304,9 @@ class DHIS2Connector:
             raise ValueError(f"No organisation unit matched '{name}'.")
 
         exact_matches = [
-            row for row in matches if str(row.get("displayName", "")).lower() == name.strip().lower()
+            row
+            for row in matches
+            if str(row.get("displayName", "")).lower() == name.strip().lower()
         ]
         best_match = exact_matches[0] if exact_matches else matches[0]
         return str(best_match["id"])
@@ -314,7 +324,9 @@ class DHIS2Connector:
             combined_rows.extend(payload.get(collection_key, []))
         return combined_rows
 
-    def _get_paginated_payloads(self, path: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+    def _get_paginated_payloads(
+        self, path: str, params: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         """Fetch all pages for a DHIS2 endpoint that returns a ``pager`` object."""
         payloads: list[dict[str, Any]] = []
         page = 1
@@ -334,7 +346,9 @@ class DHIS2Connector:
 
         return payloads
 
-    def _request_json(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    def _request_json(
+        self, path: str, params: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Send a GET request and return a JSON payload with clear errors."""
         self._respect_rate_limit()
         url = self._build_url(path)
@@ -384,7 +398,9 @@ class DHIS2Connector:
         clean_path = path if path.startswith("/") else f"/{path}"
         return f"{self.api_base_url}{clean_path}"
 
-    def _combine_analytics_payloads(self, payloads: list[dict[str, Any]]) -> dict[str, Any]:
+    def _combine_analytics_payloads(
+        self, payloads: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """Merge paginated analytics payloads into a single response object."""
         if not payloads:
             return {"headers": [], "rows": [], "metaData": {"items": {}}}
@@ -447,7 +463,9 @@ class DHIS2Connector:
             ],
         )
 
-    def _metadata_name(self, metadata_items: dict[str, Any], item_id: Any) -> str | None:
+    def _metadata_name(
+        self, metadata_items: dict[str, Any], item_id: Any
+    ) -> str | None:
         """Look up a display name from the DHIS2 metadata map."""
         if item_id is None:
             return None
@@ -518,7 +536,9 @@ def get(
         resolved_org_units.append(connector.resolve_org_unit_id_by_name(county_name))
 
     if not resolved_org_units:
-        raise ValueError("Provide either org_unit_ids or county when calling khis.get().")
+        raise ValueError(
+            "Provide either org_unit_ids or county when calling khis.get()."
+        )
 
     return connector.get_analytics(
         indicator_ids=indicator_ids,

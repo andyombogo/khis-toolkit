@@ -47,14 +47,18 @@ def create_county_map(
     if "county" not in data_df.columns:
         raise ValueError("create_county_map() requires a 'county' column.")
     if value_col not in data_df.columns:
-        raise ValueError(f"create_county_map() requires '{value_col}' in the input data.")
+        raise ValueError(
+            f"create_county_map() requires '{value_col}' in the input data."
+        )
 
     counties_df = list_counties().rename(columns={"name": "county"})
     merged = counties_df.merge(data_df[["county", value_col]], on="county", how="left")
     merged[value_col] = pd.to_numeric(merged[value_col], errors="coerce")
 
     if folium is None:
-        return _FallbackMap(_fallback_map_html(merged, value_col=value_col, title=title))
+        return _FallbackMap(
+            _fallback_map_html(merged, value_col=value_col, title=title)
+        )
 
     map_object = folium.Map(
         location=[0.2, 37.9],
@@ -128,7 +132,9 @@ def create_trend_chart(df: pd.DataFrame, county: str, indicator: str):
         filtered["upper_bound"] = pd.NA
         filtered["is_forecast"] = False
     else:
-        raise ValueError("The input data does not contain recognised trend-chart columns.")
+        raise ValueError(
+            "The input data does not contain recognised trend-chart columns."
+        )
 
     figure = go.Figure()
     figure.add_trace(
@@ -154,7 +160,9 @@ def create_trend_chart(df: pd.DataFrame, county: str, indicator: str):
         figure.add_trace(
             go.Scatter(
                 x=pd.concat([filtered["period"], filtered["period"].iloc[::-1]]),
-                y=pd.concat([filtered["upper_bound"], filtered["lower_bound"].iloc[::-1]]),
+                y=pd.concat(
+                    [filtered["upper_bound"], filtered["lower_bound"].iloc[::-1]]
+                ),
                 fill="toself",
                 fillcolor="rgba(176, 58, 46, 0.12)",
                 line={"color": "rgba(0,0,0,0)"},
@@ -188,10 +196,11 @@ def create_quality_table(scorecard_df: pd.DataFrame) -> str:
     }
 
     rows = []
-    for row in scorecard_df.sort_values(["overall_quality_grade", "county"], kind="mergesort").to_dict(orient="records"):
+    for row in scorecard_df.sort_values(
+        ["overall_quality_grade", "county"], kind="mergesort"
+    ).to_dict(orient="records"):
         grade = str(row["overall_quality_grade"])
-        rows.append(
-            f"""
+        rows.append(f"""
             <tr style="background:{grade_colors.get(grade, '#ffffff')};">
               <td>{escape(str(row['county']))}</td>
               <td>{float(row['completeness_score']):.1f}</td>
@@ -200,8 +209,7 @@ def create_quality_table(scorecard_df: pd.DataFrame) -> str:
               <td>{'Yes' if bool(row['suspicious_zeros']) else 'No'}</td>
               <td><strong>{escape(grade)}</strong></td>
             </tr>
-            """
-        )
+            """)
 
     return f"""
     <table style="width:100%; border-collapse:collapse; font-family:Georgia, serif; font-size:14px;">
@@ -227,8 +235,9 @@ def _fallback_map_html(merged: pd.DataFrame, value_col: str, title: str) -> str:
     preview_source = merged.copy()
     preview_source["_has_value"] = preview_source[value_col].notna().astype(int)
     preview = (
-        preview_source.sort_values(["_has_value", "county"], ascending=[False, True], kind="mergesort")
-        [["county", "region", value_col]]
+        preview_source.sort_values(
+            ["_has_value", "county"], ascending=[False, True], kind="mergesort"
+        )[["county", "region", value_col]]
         .fillna("No data")
         .head(12)
     )
@@ -270,7 +279,9 @@ def _simplified_county_geojson(merged: pd.DataFrame, value_col: str) -> dict[str
                 "properties": {
                     "county": row["county"],
                     "region": row["region"],
-                    "display_value": "No data" if pd.isna(value) else round(float(value), 2),
+                    "display_value": (
+                        "No data" if pd.isna(value) else round(float(value), 2)
+                    ),
                 },
                 "geometry": {
                     "type": "Polygon",

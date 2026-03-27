@@ -31,16 +31,23 @@ class DashboardState:
 def create_app() -> Flask:
     """Create the Flask application used for local and deployed dashboard demos."""
     app = Flask(__name__)
-    app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "change-this-in-production")
+    app.config["SECRET_KEY"] = os.getenv(
+        "FLASK_SECRET_KEY", "change-this-in-production"
+    )
     app.config["DASHBOARD_STATE"] = _load_dashboard_state()
 
     @app.get("/")
     def index():
         """Render the main county dashboard page."""
         state = _state(app)
-        selected_county = request.args.get("county") or state.data["org_unit_name"].dropna().astype(str).iloc[0]
+        selected_county = (
+            request.args.get("county")
+            or state.data["org_unit_name"].dropna().astype(str).iloc[0]
+        )
         initial_forecast = _forecast_for_county(state, selected_county)
-        trend_chart = create_trend_chart(initial_forecast, county=selected_county, indicator=state.indicator_name)
+        trend_chart = create_trend_chart(
+            initial_forecast, county=selected_county, indicator=state.indicator_name
+        )
         latest_values = _latest_county_values(state.data)
         map_object = create_county_map(latest_values, value_col="latest_value")
         map_html = map_object.get_root().render()
@@ -80,7 +87,9 @@ def create_app() -> Flask:
             periods_ahead=periods_ahead,
             method=method,
         ).copy()
-        forecast_df["period"] = pd.to_datetime(forecast_df["period"], errors="coerce").dt.strftime("%Y-%m-%d")
+        forecast_df["period"] = pd.to_datetime(
+            forecast_df["period"], errors="coerce"
+        ).dt.strftime("%Y-%m-%d")
         return jsonify(forecast_df.to_dict(orient="records"))
 
     @app.get("/api/quality/<county>")
@@ -109,9 +118,7 @@ def _load_dashboard_state() -> DashboardState:
         connector = khis.connect()
         if getattr(connector, "using_demo_server", False):
             data, indicator_name, indicator_id = _load_demo_dashboard_data(connector)
-            banner = (
-                "Demo using DHIS2 public test data. Connect your KHIS credentials for real Kenya county data."
-            )
+            banner = "Demo using DHIS2 public test data. Connect your KHIS credentials for real Kenya county data."
         else:
             data, indicator_name, indicator_id = _load_khis_dashboard_data(connector)
             banner = "Connected to KHIS credentials. Showing live county-style indicator data."
@@ -139,7 +146,9 @@ def _load_demo_dashboard_data(connector) -> tuple[pd.DataFrame, str, str]:
     """Map public demo-server series onto Kenya counties for illustration."""
     indicators = connector.get_indicators(search_term="malaria")
     if indicators.empty:
-        raise RuntimeError("No malaria indicators were available on the demo DHIS2 server.")
+        raise RuntimeError(
+            "No malaria indicators were available on the demo DHIS2 server."
+        )
     indicator_id = str(indicators.iloc[0]["id"])
     indicator_name = str(indicators.iloc[0]["name"])
 
@@ -148,7 +157,9 @@ def _load_demo_dashboard_data(connector) -> tuple[pd.DataFrame, str, str]:
         org_units = connector.get_org_units()
     org_units = org_units.head(6)
     if org_units.empty:
-        raise RuntimeError("No organisation units were available on the DHIS2 demo server.")
+        raise RuntimeError(
+            "No organisation units were available on the DHIS2 demo server."
+        )
 
     raw = connector.get_analytics(
         indicator_ids=indicator_id,
@@ -165,7 +176,9 @@ def _load_demo_dashboard_data(connector) -> tuple[pd.DataFrame, str, str]:
         .sort_values("period", kind="mergesort")
         .reset_index(drop=True)
     )
-    counties = khis.list_counties()[["name", "code", "region"]].rename(columns={"name": "org_unit_name"})
+    counties = khis.list_counties()[["name", "code", "region"]].rename(
+        columns={"name": "org_unit_name"}
+    )
     records: list[dict[str, object]] = []
     for county in counties.to_dict(orient="records"):
         scale = 0.72 + (int(county["code"]) % 9) * 0.06
@@ -189,7 +202,9 @@ def _load_khis_dashboard_data(connector) -> tuple[pd.DataFrame, str, str]:
     """Attempt to build a real county dashboard frame from KHIS credentials."""
     indicators = connector.get_indicators(search_term="malaria")
     if indicators.empty:
-        raise RuntimeError("No malaria indicators were found in the connected KHIS instance.")
+        raise RuntimeError(
+            "No malaria indicators were found in the connected KHIS instance."
+        )
     indicator_id = str(indicators.iloc[0]["id"])
     indicator_name = str(indicators.iloc[0]["name"])
 
@@ -204,14 +219,18 @@ def _load_khis_dashboard_data(connector) -> tuple[pd.DataFrame, str, str]:
         id_to_county[org_unit_id] = county_name
 
     if not resolved_ids:
-        raise RuntimeError("No Kenya county organisation units could be resolved from KHIS.")
+        raise RuntimeError(
+            "No Kenya county organisation units could be resolved from KHIS."
+        )
 
     raw = connector.get_analytics(
         indicator_ids=indicator_id,
         org_unit_ids=resolved_ids,
         periods="LAST_12_MONTHS",
     )
-    raw["org_unit_name"] = raw["org_unit_id"].map(id_to_county).fillna(raw["org_unit_name"])
+    raw["org_unit_name"] = (
+        raw["org_unit_id"].map(id_to_county).fillna(raw["org_unit_name"])
+    )
     return raw, indicator_name, indicator_id
 
 
@@ -267,7 +286,10 @@ def _quality_payload(state: DashboardState, county: str) -> dict[str, object]:
     """Return the quality-card payload for one county."""
     row = state.scorecard[state.scorecard["county"].astype(str) == str(county)]
     if row.empty:
-        return {"county": county, "message": "No quality scorecard row is available for this county."}
+        return {
+            "county": county,
+            "message": "No quality scorecard row is available for this county.",
+        }
     payload = row.iloc[0].to_dict()
     payload["summary"] = state.quality_summary
     return payload
@@ -276,7 +298,12 @@ def _quality_payload(state: DashboardState, county: str) -> dict[str, object]:
 def _resolve_indicator_name(state: DashboardState, indicator_path_value: str) -> str:
     """Resolve a path parameter into the cached indicator name."""
     candidate = unquote(indicator_path_value).replace("_", " ").strip().lower()
-    if candidate in {state.indicator_name.lower(), state.indicator_id.lower(), "malaria", "malaria cases"}:
+    if candidate in {
+        state.indicator_name.lower(),
+        state.indicator_id.lower(),
+        "malaria",
+        "malaria cases",
+    }:
         return state.indicator_name
     return state.indicator_name
 

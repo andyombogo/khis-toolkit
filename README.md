@@ -10,6 +10,13 @@ Python analytics toolkit for Kenya DHIS2/KHIS health data.
 
 KHIS Toolkit is built for people who work with county health data and need to move quickly from extraction to action. It helps a Kenya Health Records Officer pull DHIS2 data, clean routine reporting issues, check data quality, and generate short forecasts without building a custom workflow from scratch. The package is written with Kenya's county structure, reporting cadence, and review-meeting needs in mind.
 
+- GitHub: https://github.com/andyombogo/khis-toolkit
+- PyPI: https://pypi.org/project/khis-toolkit/
+- Render deployment guide: [docs/DEPLOY.md](docs/DEPLOY.md)
+- Release checklist: [docs/PRELAUNCH_CHECKLIST.md](docs/PRELAUNCH_CHECKLIST.md)
+- Launch copy: [docs/LAUNCH_POSTS.md](docs/LAUNCH_POSTS.md)
+- Expected Render URL after first deploy: `https://khis-toolkit-dashboard.onrender.com`
+
 ## Why This Exists
 
 Kenya county teams already use DHIS2/KHIS, but the analytics gap remains real: pulling data is one thing, turning it into something clean, explainable, and useful for county planning is another. In practice, many DHIS2 Python libraries are generic or lightly maintained, and they do not centre Kenya's county hierarchy, KHIS-style data cleaning, or operational forecasting workflows. KHIS Toolkit exists to close that gap with a package that feels familiar to Kenya's health system rather than a generic data-science template.
@@ -49,7 +56,7 @@ forecast = khis.forecast(df_clean, weeks_ahead=4)
 
 ## Live Dashboard
 
-Deployment is configured in [render.yaml](render.yaml). Add `FLASK_SECRET_KEY`, `DHIS2_BASE_URL`, `DHIS2_USERNAME`, and `DHIS2_PASSWORD` in Render before the first live deploy, then place the service URL here so county stakeholders can open the dashboard directly.
+Deployment is configured in [render.yaml](render.yaml). Follow the [Render deployment guide](docs/DEPLOY.md) to publish the Flask dashboard with demo or KHIS credentials. Render will usually assign `https://khis-toolkit-dashboard.onrender.com` if the service name is available; confirm the actual URL after the first deploy and update this section if Render gives you a different subdomain.
 
 ## All 47 Kenya Counties Supported
 

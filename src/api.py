@@ -48,7 +48,9 @@ class CachedAPIState:
 
 def create_app(api_key: str | None = None) -> FastAPI:
     """Create the KHIS Toolkit FastAPI application."""
-    settings = APISettings(api_key=(api_key or os.getenv("KHIS_API_KEY") or "").strip() or None)
+    settings = APISettings(
+        api_key=(api_key or os.getenv("KHIS_API_KEY") or "").strip() or None
+    )
     if settings.api_key is None:
         print(
             "WARNING: KHIS_API_KEY is not set. FastAPI is running without auth for development only."
@@ -103,7 +105,9 @@ def create_app(api_key: str | None = None) -> FastAPI:
         return connector.get_indicators(search_term=search).to_dict(orient="records")
 
     @app.get("/data/{county}/{indicator}", dependencies=[Depends(require_api_key)])
-    def data(county: str, indicator: str, periods: str = "last_12_months") -> list[dict[str, Any]]:
+    def data(
+        county: str, indicator: str, periods: str = "last_12_months"
+    ) -> list[dict[str, Any]]:
         """Fetch and clean indicator data for one county."""
         series_df = _fetch_series(
             request_app=app,
@@ -112,7 +116,9 @@ def create_app(api_key: str | None = None) -> FastAPI:
             periods=periods,
         )
         output = series_df.copy()
-        output["period"] = pd.to_datetime(output["period"], errors="coerce").dt.strftime("%Y-%m-%d")
+        output["period"] = pd.to_datetime(
+            output["period"], errors="coerce"
+        ).dt.strftime("%Y-%m-%d")
         return output.to_dict(orient="records")
 
     @app.post("/forecast", dependencies=[Depends(require_api_key)])
@@ -133,7 +139,9 @@ def create_app(api_key: str | None = None) -> FastAPI:
             weeks_ahead=payload.weeks_ahead,
             method=payload.method,
         ).copy()
-        forecast_df["period"] = pd.to_datetime(forecast_df["period"], errors="coerce").dt.strftime("%Y-%m-%d")
+        forecast_df["period"] = pd.to_datetime(
+            forecast_df["period"], errors="coerce"
+        ).dt.strftime("%Y-%m-%d")
         return forecast_df.to_dict(orient="records")
 
     @app.get("/quality/{county}", dependencies=[Depends(require_api_key)])
@@ -143,7 +151,9 @@ def create_app(api_key: str | None = None) -> FastAPI:
         county_name = _resolve_county_name(county)
         row = state.scorecard[state.scorecard["county"].astype(str) == county_name]
         if row.empty:
-            raise HTTPException(status_code=404, detail=f"No quality scorecard found for {county_name}.")
+            raise HTTPException(
+                status_code=404, detail=f"No quality scorecard found for {county_name}."
+            )
         payload = row.iloc[0].to_dict()
         payload["summary"] = state.summary
         payload["indicator"] = state.indicator_name
@@ -171,7 +181,9 @@ def _load_cached_state() -> CachedAPIState:
             data, indicator_name, indicator_id, banner = _load_live_state(connector)
     except Exception as exc:
         data, indicator_name, indicator_id = _offline_data()
-        banner = f"Offline demo fallback was used because live data loading failed: {exc}"
+        banner = (
+            f"Offline demo fallback was used because live data loading failed: {exc}"
+        )
 
     cleaned = khis.clean(data)
     scorecard, summary = khis.quality_report(cleaned)
@@ -224,7 +236,9 @@ def _load_demo_state(connector) -> tuple[pd.DataFrame, str, str, str]:
                     "value": round(float(row["value"]) * factor, 2),
                 }
             )
-    banner = "Using public DHIS2 demo data mapped onto Kenya counties for API development."
+    banner = (
+        "Using public DHIS2 demo data mapped onto Kenya counties for API development."
+    )
     return pd.DataFrame(records), indicator_name, indicator_id, banner
 
 
@@ -254,7 +268,9 @@ def _load_live_state(connector) -> tuple[pd.DataFrame, str, str, str]:
         org_unit_ids=resolved_ids,
         periods="LAST_12_MONTHS",
     )
-    raw["org_unit_name"] = raw["org_unit_id"].map(id_to_county).fillna(raw["org_unit_name"])
+    raw["org_unit_name"] = (
+        raw["org_unit_id"].map(id_to_county).fillna(raw["org_unit_name"])
+    )
     banner = "Using live KHIS county data."
     return raw, indicator_name, indicator_id, banner
 
@@ -275,7 +291,9 @@ def _offline_data() -> tuple[pd.DataFrame, str, str]:
                     "org_unit_id": f"OFFLINE_{int(county['code']):02d}",
                     "org_unit_name": county["name"],
                     "period": period,
-                    "value": round(10 + int(county["code"]) * 0.4 + (period.month % 5), 2),
+                    "value": round(
+                        10 + int(county["code"]) * 0.4 + (period.month % 5), 2
+                    ),
                 }
             )
     return pd.DataFrame(records), indicator_name, indicator_id
@@ -309,12 +327,19 @@ def _fetch_series(
         pass
 
     cached = _ensure_cached_state(request_app).data
-    indicator_column = "indicator_name" if "indicator_name" in cached.columns else "indicator_id"
+    indicator_column = (
+        "indicator_name" if "indicator_name" in cached.columns else "indicator_id"
+    )
     filtered = cached[
         (cached["org_unit_name"].astype(str) == county)
         & (
             (cached[indicator_column].astype(str).str.lower() == indicator.lower())
-            | (cached.get("indicator_id", pd.Series(dtype="object")).astype(str).str.lower() == indicator.lower())
+            | (
+                cached.get("indicator_id", pd.Series(dtype="object"))
+                .astype(str)
+                .str.lower()
+                == indicator.lower()
+            )
         )
     ].copy()
     if filtered.empty:
@@ -324,7 +349,9 @@ def _fetch_series(
             & (cached[indicator_column].astype(str) == fallback_indicator)
         ].copy()
     if filtered.empty:
-        raise HTTPException(status_code=404, detail=f"No cached data found for county='{county}'.")
+        raise HTTPException(
+            status_code=404, detail=f"No cached data found for county='{county}'."
+        )
     return filtered
 
 

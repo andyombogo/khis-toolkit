@@ -56,7 +56,9 @@ def completeness_score(df: pd.DataFrame, expected_periods: int = 12) -> pd.DataF
     grouped["completeness_pct"] = (
         grouped["reported_periods"] / grouped["expected_periods"] * 100.0
     ).round(1)
-    grouped["completeness_class"] = grouped["completeness_pct"].map(_classify_completeness)
+    grouped["completeness_class"] = grouped["completeness_pct"].map(
+        _classify_completeness
+    )
     return grouped[
         [
             "county",
@@ -88,9 +90,13 @@ def outlier_report(
     report["outlier_score"] = 0.0
     report["outlier_context"] = "Within expected range."
 
-    for _, indices in report.groupby([county_column, indicator_column], dropna=False).groups.items():
+    for _, indices in report.groupby(
+        [county_column, indicator_column], dropna=False
+    ).groups.items():
         values = pd.to_numeric(report.loc[indices, "value"], errors="coerce")
-        flags, scores = _compute_outlier_flags(values, method=method, threshold=threshold)
+        flags, scores = _compute_outlier_flags(
+            values, method=method, threshold=threshold
+        )
         average_value = values.mean(skipna=True)
 
         report.loc[indices, "outlier_flag"] = flags.to_numpy()
@@ -118,16 +124,18 @@ def timeliness_report(df: pd.DataFrame) -> pd.DataFrame:
         return counties
 
     working = df.copy()
-    working["submission_date"] = pd.to_datetime(working["submission_date"], errors="coerce")
+    working["submission_date"] = pd.to_datetime(
+        working["submission_date"], errors="coerce"
+    )
     working["period"] = pd.to_datetime(working["period"], errors="coerce")
 
     period_end_chunks = []
-    for _, group in working.groupby([county_column, _indicator_column(working)], dropna=False, sort=False):
+    for _, group in working.groupby(
+        [county_column, _indicator_column(working)], dropna=False, sort=False
+    ):
         period_end_chunks.append(_group_period_end_dates(group))
     working["period_end"] = pd.concat(period_end_chunks).sort_index()
-    working["delay_days"] = (
-        working["submission_date"] - working["period_end"]
-    ).dt.days
+    working["delay_days"] = (working["submission_date"] - working["period_end"]).dt.days
 
     summary = (
         working.groupby(county_column, dropna=False)["delay_days"]
@@ -152,11 +160,15 @@ def zero_report_analysis(df: pd.DataFrame) -> pd.DataFrame:
         df.groupby([county_column, indicator_column], dropna=False)["value"]
         .agg(
             observed_periods=lambda series: int(series.notna().sum()),
-            zero_periods=lambda series: int((pd.to_numeric(series, errors="coerce") == 0).sum()),
+            zero_periods=lambda series: int(
+                (pd.to_numeric(series, errors="coerce") == 0).sum()
+            ),
             missing_periods=lambda series: int(series.isna().sum()),
-            max_value=lambda series: float(pd.to_numeric(series, errors="coerce").max(skipna=True))
-            if series.notna().any()
-            else np.nan,
+            max_value=lambda series: (
+                float(pd.to_numeric(series, errors="coerce").max(skipna=True))
+                if series.notna().any()
+                else np.nan
+            ),
         )
         .reset_index()
         .rename(columns={county_column: "county", indicator_column: "indicator"})
@@ -166,9 +178,7 @@ def zero_report_analysis(df: pd.DataFrame) -> pd.DataFrame:
         (grouped["zero_periods"] / grouped["observed_periods"] * 100.0).round(1),
         np.nan,
     )
-    grouped["suspicious_zero_pattern"] = (
-        grouped["zero_pct"].fillna(0) > 50.0
-    ) & (
+    grouped["suspicious_zero_pattern"] = (grouped["zero_pct"].fillna(0) > 50.0) & (
         (grouped["missing_periods"] > 0) | (grouped["max_value"].fillna(0) > 0)
     )
     grouped["zero_pattern"] = np.where(
@@ -221,7 +231,9 @@ def county_scorecard(df: pd.DataFrame) -> tuple[pd.DataFrame, str]:
 
     scorecard["outlier_count"] = scorecard["outlier_count"].fillna(0).astype(int)
     scorecard["late_reporter"] = scorecard["late_reporter"].fillna(False).astype(bool)
-    scorecard["suspicious_zeros"] = scorecard["suspicious_zeros"].fillna(False).astype(bool)
+    scorecard["suspicious_zeros"] = (
+        scorecard["suspicious_zeros"].fillna(False).astype(bool)
+    )
 
     quality_points = (
         scorecard["completeness_score"].fillna(0)
@@ -230,16 +242,20 @@ def county_scorecard(df: pd.DataFrame) -> tuple[pd.DataFrame, str]:
         - scorecard["suspicious_zeros"].astype(int) * 10.0
     ).clip(lower=0, upper=100)
     scorecard["overall_quality_grade"] = quality_points.map(_grade_quality_score)
-    scorecard = scorecard[
-        [
-            "county",
-            "completeness_score",
-            "outlier_count",
-            "late_reporter",
-            "suspicious_zeros",
-            "overall_quality_grade",
+    scorecard = (
+        scorecard[
+            [
+                "county",
+                "completeness_score",
+                "outlier_count",
+                "late_reporter",
+                "suspicious_zeros",
+                "overall_quality_grade",
+            ]
         ]
-    ].sort_values(["overall_quality_grade", "county"], ascending=[True, True]).reset_index(drop=True)
+        .sort_values(["overall_quality_grade", "county"], ascending=[True, True])
+        .reset_index(drop=True)
+    )
 
     text_summary = _build_scorecard_summary(scorecard)
     return scorecard, text_summary
@@ -271,8 +287,7 @@ def plot_quality_heatmap(scorecard_df: pd.DataFrame):
         )
 
     figure = go.Figure(
-        data=
-        [
+        data=[
             go.Heatmap(
                 z=pivot.to_numpy(),
                 x=[str(column) for column in pivot.columns],
@@ -312,7 +327,9 @@ def _indicator_column(df: pd.DataFrame) -> str:
     for candidate in ("indicator", "indicator_name", "indicator_id"):
         if candidate in df.columns:
             return candidate
-    raise ValueError("Expected an 'indicator', 'indicator_name', or 'indicator_id' column.")
+    raise ValueError(
+        "Expected an 'indicator', 'indicator_name', or 'indicator_id' column."
+    )
 
 
 def _classify_completeness(value: float) -> str:
@@ -339,12 +356,16 @@ def _compute_outlier_flags(
         q3 = clean_values.quantile(0.75)
         iqr = q3 - q1
         if pd.isna(iqr) or iqr == 0:
-            return pd.Series(False, index=series.index), pd.Series(0.0, index=series.index)
+            return pd.Series(False, index=series.index), pd.Series(
+                0.0, index=series.index
+            )
         lower_bound = q1 - threshold * iqr
         upper_bound = q3 + threshold * iqr
         flags = (clean_values < lower_bound) | (clean_values > upper_bound)
         distance = np.maximum(lower_bound - clean_values, clean_values - upper_bound)
-        scores = pd.Series(np.where(flags, np.abs(distance) / iqr, 0.0), index=series.index)
+        scores = pd.Series(
+            np.where(flags, np.abs(distance) / iqr, 0.0), index=series.index
+        )
         return flags.fillna(False), scores.fillna(0.0)
 
     mean_value = clean_values.mean()
