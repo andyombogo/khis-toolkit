@@ -72,6 +72,29 @@ Deployment is configured in [render.yaml](render.yaml). Follow the [Render deplo
 
 Once you have a working demo to show, the next step is to request real KHIS access through the Ministry of Health support channel at `khissupport@health.go.ke`. Having a concrete demo or GitHub repo makes that conversation much easier because you can show exactly how the data will be used and why live county IDs matter.
 
+## For Researchers And Grant Applications
+
+KHIS Toolkit is a Kenya-first Python workflow for extracting, cleaning, validating, forecasting, and visualising routine DHIS2/KHIS county health data. In a grant or methodology section, it can be described as the reproducible data-engineering and analytics layer used to convert county indicator pulls into analysis-ready time series, quality scorecards, short-horizon forecasts, and dashboard outputs. The design is intentionally operational: the same workflow can support exploratory research, county review meetings, and pilot digital public health deployments without rewriting the pipeline for each study.
+
+Suggested citation:
+
+`Andrew, J. (2026). khis-toolkit: Python analytics toolkit for Kenya DHIS2/KHIS health data (Version 0.1.0) [Computer software]. https://github.com/andyombogo/khis-toolkit`
+
+Current indicator support:
+
+- Malaria-oriented DHIS2/KHIS indicators demonstrated in the public notebooks and dashboard
+- County indicator pulls by ID or search term for any accessible DHIS2/KHIS metadata item
+- County data quality workflows for completeness, outliers, timeliness, and suspicious zeros
+- Forecasting workflows for routine weekly or monthly county indicators
+
+Validation and data quality methodology:
+
+- [examples/03_data_quality.ipynb](examples/03_data_quality.ipynb)
+
+Research collaboration contact:
+
+- `andyombogo@gmail.com`
+
 ## Contributing
 
 Pull requests are welcome, especially from people who have KHIS access and can help verify real organisation-unit IDs, indicator naming, and county-specific workflow details. If you work in county health information, public health analytics, or DHIS2 support, your practical feedback is especially valuable.
