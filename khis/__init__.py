@@ -79,6 +79,7 @@ def get(
     indicator_ids = indicator
     if indicator_ids is None:
         raise ValueError("Pass an indicator ID or iterable of indicator IDs via 'indicator'.")
+    resolved_indicator_ids = _resolve_indicator_ids(connector, indicator_ids)
 
     resolved_org_units = _coerce_to_string_list(org_unit_ids)
     requested_counties = _coerce_to_string_list(counties) + _coerce_to_string_list(county)
@@ -92,7 +93,7 @@ def get(
         raise ValueError("Pass county/counties or org_unit_ids when calling khis.get().")
 
     return connector.get_analytics(
-        indicator_ids=indicator_ids,
+        indicator_ids=resolved_indicator_ids,
         org_unit_ids=resolved_org_units,
         periods=periods,
         output_format=output_format,
@@ -155,3 +156,29 @@ def _coerce_to_string_list(values: Iterable[str] | str | None) -> list[str]:
     else:
         raw_parts = list(values)
     return [str(part).strip() for part in raw_parts if str(part).strip()]
+
+
+def _resolve_indicator_ids(
+    connector: DHIS2Connector,
+    indicator_values: Iterable[str] | str,
+) -> list[str]:
+    """Resolve friendly indicator terms to DHIS2 indicator IDs when possible."""
+    resolved: list[str] = []
+    for value in _coerce_to_string_list(indicator_values):
+        try:
+            matches = connector.get_indicators(search_term=value)
+        except Exception:
+            matches = None
+
+        if matches is None or matches.empty:
+            resolved.append(value)
+            continue
+
+        exact_mask = (
+            matches["id"].astype(str).str.lower().eq(value.lower())
+            | matches["name"].astype(str).str.lower().eq(value.lower())
+            | matches["code"].fillna("").astype(str).str.lower().eq(value.lower())
+        )
+        chosen = matches[exact_mask].iloc[0] if exact_mask.any() else matches.iloc[0]
+        resolved.append(str(chosen["id"]))
+    return resolved

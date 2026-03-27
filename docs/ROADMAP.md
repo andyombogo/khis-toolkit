@@ -9,12 +9,13 @@
 - [x] Phase 4: Prophet, XGBoost, and ensemble forecasting with anomaly detection and forecasting notebook
 - [x] Phase 5: Flask dashboard, county map helpers, and Kenya-focused README
 - [x] Phase 6: FastAPI endpoints, CI/CD hardening, and PyPI publication assets
+- [x] Phase 7: quick-start and county notebooks for first-time evaluators
 
 ## Next Build Targets
 
-- [ ] Phase 7: quick-start notebook that works in both demo mode and real KHIS mode
-- [ ] Phase 7: polished examples for first-time county users and external reviewers
 - [ ] Phase 8: package release, first dashboard deployment, and KHIS user feedback loop
+- [ ] Phase 8: deployment verification, notebook run-through, and launch checklist
+- [ ] Phase 8: public launch assets including GitHub release notes and social copy
 
 ## Product Roadmap
 
