@@ -128,3 +128,81 @@ def test_dashboard_exposes_mental_health_county_endpoint():
 
     assert response.status_code == 200
     assert response.get_json()["burden_band"] == "High"
+
+
+def test_dashboard_forecast_endpoint_falls_back_to_observed_series():
+    """The dashboard should not 500 when forecast generation fails."""
+    state = DashboardState(
+        data=pd.DataFrame(
+            {
+                "indicator_id": ["offline_malaria_cases"] * 2,
+                "indicator_name": ["Malaria Cases (Offline Demo)"] * 2,
+                "org_unit_id": ["OFFLINE_47"] * 2,
+                "org_unit_name": ["Nairobi"] * 2,
+                "period": [pd.Timestamp("2024-11-01"), pd.Timestamp("2024-12-01")],
+                "value": [18.0, 19.0],
+            }
+        ),
+        scorecard=pd.DataFrame(
+            {
+                "county": ["Nairobi"],
+                "completeness_score": [100.0],
+                "outlier_count": [0],
+                "late_reporter": [False],
+                "suspicious_zeros": [False],
+                "overall_quality_grade": ["A"],
+            }
+        ),
+        mental_health_data=pd.DataFrame(
+            {
+                "indicator_id": ["demo_mental_health_outpatient_visits"],
+                "indicator_name": ["Mental Health Outpatient Visits"],
+                "indicator_slug": ["mental_health_outpatient_visits"],
+                "indicator_domain": ["Mental health services"],
+                "indicator_package": ["mns_core"],
+                "org_unit_id": ["KE47"],
+                "org_unit_name": ["Nairobi"],
+                "period": [pd.Timestamp("2024-12-01")],
+                "value": [21.0],
+                "data_source": ["demo_fallback"],
+            }
+        ),
+        mental_health_summary=pd.DataFrame(
+            {
+                "county": ["Nairobi"],
+                "latest_period": ["2024-12-01"],
+                "tracked_indicators": [1],
+                "latest_total_value": [21.0],
+                "average_latest_value": [21.0],
+                "trend_direction": ["Rising"],
+                "burden_band": ["High"],
+                "county_percentile": [1.0],
+                "data_source": ["demo_fallback"],
+            }
+        ),
+        quality_summary="Demo summary",
+        indicator_name="Malaria Cases (Offline Demo)",
+        indicator_id="offline_malaria_cases",
+        banner="Offline demo banner",
+        last_updated="2026-03-27 12:00 UTC",
+    )
+
+    with patch("dashboard.app._load_dashboard_state", return_value=state):
+        app = create_app()
+    app.config["TESTING"] = True
+
+    with patch(
+        "dashboard.app.khis.forecast_indicator_series",
+        side_effect=RuntimeError("forecast unavailable"),
+    ):
+        client = app.test_client()
+        forecast_response = client.get(
+            "/api/forecast/Nairobi/Malaria%20Cases%20(Offline%20Demo)"
+        )
+        root_response = client.get("/")
+
+    assert forecast_response.status_code == 200
+    payload = forecast_response.get_json()
+    assert len(payload) == 2
+    assert payload[0]["is_forecast"] is False
+    assert root_response.status_code == 200

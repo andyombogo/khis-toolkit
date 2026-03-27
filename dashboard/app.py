@@ -84,9 +84,9 @@ def create_app() -> Flask:
         periods_ahead = int(request.args.get("periods_ahead", 4))
         resolved_county = _normalise_county_input(county)
         resolved_indicator = _resolve_indicator_name(state, indicator)
-        forecast_df = khis.forecast_indicator_series(
-            state.data,
-            county=resolved_county,
+        forecast_df = _forecast_for_county(
+            state,
+            resolved_county,
             indicator=resolved_indicator,
             periods_ahead=periods_ahead,
             method=method,
@@ -294,15 +294,76 @@ def _latest_county_values(data: pd.DataFrame) -> pd.DataFrame:
     return latest[["county", "latest_value"]]
 
 
-def _forecast_for_county(state: DashboardState, county: str) -> pd.DataFrame:
-    """Create the cached initial trend/forecast chart dataset."""
-    return khis.forecast_indicator_series(
-        state.data,
-        county=county,
-        indicator=state.indicator_name,
-        periods_ahead=4,
-        method="ensemble",
-    ).assign(county=county)
+def _forecast_for_county(
+    state: DashboardState,
+    county: str,
+    indicator: str | None = None,
+    periods_ahead: int = 4,
+    method: str = "ensemble",
+) -> pd.DataFrame:
+    """Create the chart dataset, falling back to observed data if forecasting fails."""
+    resolved_indicator = indicator or state.indicator_name
+    try:
+        return khis.forecast_indicator_series(
+            state.data,
+            county=county,
+            indicator=resolved_indicator,
+            periods_ahead=periods_ahead,
+            method=method,
+        ).assign(county=county)
+    except Exception:
+        return _observed_series_for_county(
+            state,
+            county=county,
+            indicator=resolved_indicator,
+        )
+
+
+def _observed_series_for_county(
+    state: DashboardState,
+    county: str,
+    indicator: str,
+) -> pd.DataFrame:
+    """Return an observed-only chart frame when forecast generation is unavailable."""
+    county_frame = state.data[
+        (state.data["org_unit_name"].astype(str) == str(county))
+        & (state.data["indicator_name"].astype(str) == str(indicator))
+    ].copy()
+    if county_frame.empty:
+        county_frame = state.data[
+            state.data["org_unit_name"].astype(str) == str(county)
+        ].copy()
+    if county_frame.empty:
+        return pd.DataFrame(
+            columns=[
+                "period",
+                "actual",
+                "forecast",
+                "lower_bound",
+                "upper_bound",
+                "is_forecast",
+                "county",
+            ]
+        )
+
+    county_frame["period"] = pd.to_datetime(county_frame["period"], errors="coerce")
+    county_frame["actual"] = pd.to_numeric(county_frame["value"], errors="coerce")
+    county_frame["forecast"] = county_frame["actual"]
+    county_frame["lower_bound"] = county_frame["actual"]
+    county_frame["upper_bound"] = county_frame["actual"]
+    county_frame["is_forecast"] = False
+    county_frame["county"] = county
+    return county_frame[
+        [
+            "period",
+            "actual",
+            "forecast",
+            "lower_bound",
+            "upper_bound",
+            "is_forecast",
+            "county",
+        ]
+    ].sort_values("period", kind="mergesort")
 
 
 def _quality_payload(state: DashboardState, county: str) -> dict[str, object]:
