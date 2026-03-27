@@ -1,44 +1,83 @@
 # KHIS Toolkit
 
-KHIS Toolkit is a Python analytics toolkit for Kenya DHIS2/KHIS health data. The project is designed to support county-level data extraction, cleaning, quality review, forecasting, and dashboard mapping workflows.
+![PyPI Version](https://img.shields.io/pypi/v/khis-toolkit?label=PyPI)
+![CI](https://github.com/andyombogo/khis-toolkit/actions/workflows/ci.yml/badge.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)
 
-## Current Status
+Python analytics toolkit for Kenya DHIS2/KHIS health data.
 
-Phase 0 is complete in this scaffold:
+KHIS Toolkit is built for people who work with county health data and need to move quickly from extraction to action. It helps a Kenya Health Records Officer pull DHIS2 data, clean routine reporting issues, check data quality, and generate short forecasts without building a custom workflow from scratch. The package is written with Kenya's county structure, reporting cadence, and review-meeting needs in mind.
 
-- Python package structure created
-- Flask dashboard scaffold added
-- Packaging files added for `pip install -e .`
-- CI workflow and smoke tests added
-- Roadmap and API draft added
+## Why This Exists
 
-## Planned Modules
+Kenya county teams already use DHIS2/KHIS, but the analytics gap remains real: pulling data is one thing, turning it into something clean, explainable, and useful for county planning is another. In practice, many DHIS2 Python libraries are generic or lightly maintained, and they do not centre Kenya's county hierarchy, KHIS-style data cleaning, or operational forecasting workflows. KHIS Toolkit exists to close that gap with a package that feels familiar to Kenya's health system rather than a generic data-science template.
 
-- `khis.connector`: DHIS2/KHIS API access
-- `khis.counties`: Kenya county lookup and mapping metadata
-- `khis.cleaner`: indicator cleaning helpers
-- `khis.quality`: completeness and anomaly checks
-- `khis.forecast`: county-level time-series forecasting
+## What It Does
+
+- Connects to DHIS2 or KHIS and pulls indicator data with a clean Python interface.
+- Resolves all 47 Kenya counties with county metadata and placeholder-to-live DHIS2 ID support.
+- Cleans KHIS data quirks such as period parsing, duplicate rows, missingness flags, and bounded imputation.
+- Generates county data quality scorecards with completeness, outlier, timeliness, and suspicious-zero checks.
+- Produces Prophet, XGBoost, and ensemble forecasts together with a county-facing Flask dashboard.
 
 ## Quick Start
 
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-pip install -e .
-pytest -q
+```
+pip install khis-toolkit
+
+import khis
+
+conn = khis.connect()  # uses .env credentials
+df = khis.get(
+    conn,
+    "malaria_cases",
+    counties=["Nairobi"],
+    periods="last_12_months",
+)
+df_clean = khis.clean(df)
+forecast = khis.forecast(df_clean, weeks_ahead=4)
 ```
 
-## Dashboard Scaffold
+## Demo Notebooks
 
-The scaffolded Flask app responds at `/` with a simple JSON status message:
+- [01_quick_start.ipynb](examples/01_quick_start.ipynb): first-run walkthrough for connecting, pulling, and cleaning DHIS2 data.
+- [02_kenya_counties.ipynb](examples/02_kenya_counties.ipynb): county metadata, lookup helpers, and mapping-ready coordinates.
+- [03_data_quality.ipynb](examples/03_data_quality.ipynb): completeness, outliers, timeliness, and county quality scorecards.
+- [04_forecasting.ipynb](examples/04_forecasting.ipynb): Prophet, ensemble forecasts, anomaly detection, and CSV export for review meetings.
 
-```bash
-gunicorn dashboard.app:app
-```
+## Live Dashboard
 
-## Docs
+Deployment is configured in [render.yaml](render.yaml). After the first Render deployment, add the live service URL here so county stakeholders can open the dashboard directly.
 
-- [Roadmap](docs/ROADMAP.md)
-- [API draft](docs/API.md)
+## All 47 Kenya Counties Supported
+
+| County | Region | Placeholder DHIS2 ID |
+| --- | --- | --- |
+| Nairobi | Nairobi | KE47 |
+| Mombasa | Coast | KE01 |
+| Kisumu | Nyanza | KE42 |
+| Nakuru | Rift Valley | KE32 |
+| Meru | Eastern | KE12 |
+
+## Getting KHIS Credentials
+
+Once you have a working demo to show, the next step is to request real KHIS access through the Ministry of Health support channel at `khissupport@health.go.ke`. Having a concrete demo or GitHub repo makes that conversation much easier because you can show exactly how the data will be used and why live county IDs matter.
+
+## Contributing
+
+Pull requests are welcome, especially from people who have KHIS access and can help verify real organisation-unit IDs, indicator naming, and county-specific workflow details. If you work in county health information, public health analytics, or DHIS2 support, your practical feedback is especially valuable.
+
+## Roadmap
+
+- Uganda and Tanzania DHIS2 support once the Kenya workflow is stable.
+- A mental health indicator module for county burden tracking and review.
+- Automated county health report generation from scorecards and forecasts.
+
+## License
+
+MIT
+
+## Author
+
+John Andrew, Nairobi

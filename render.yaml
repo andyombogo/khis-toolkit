@@ -4,3 +4,12 @@ services:
     env: python
     buildCommand: pip install -r requirements.txt && pip install -e .
     startCommand: gunicorn dashboard.app:app
+    envVars:
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: DHIS2_BASE_URL
+        sync: false
+      - key: DHIS2_USERNAME
+        sync: false
+      - key: DHIS2_PASSWORD
+        sync: false
