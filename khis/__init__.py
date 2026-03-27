@@ -23,7 +23,15 @@ from .counties import (
     resolve_org_unit_id,
     update_from_api,
 )
-from .forecast import forecast_indicator_series
+from .forecast import (
+    anomaly_detection,
+    ensemble_forecast,
+    forecast_all_counties,
+    forecast_indicator_series,
+    plot_forecast,
+    prophet_forecast,
+    xgboost_forecast,
+)
 from .quality import (
     completeness_score,
     compute_quality_summary,
@@ -104,15 +112,18 @@ def forecast(df: Any, weeks_ahead: int = 4, **kwargs: Any) -> Any:
 __all__ = [
     "DHIS2Connector",
     "KENYA_COUNTIES",
+    "anomaly_detection",
     "clean",
     "clean_indicator_frame",
     "connect",
     "compute_quality_summary",
     "completeness_score",
     "county_scorecard",
+    "ensemble_forecast",
     "fill_missing",
     "flag_missing",
     "forecast",
+    "forecast_all_counties",
     "forecast_indicator_series",
     "full_pipeline",
     "get",
@@ -122,12 +133,15 @@ __all__ = [
     "list_indicators",
     "list_counties",
     "outlier_report",
+    "plot_forecast",
     "plot_quality_heatmap",
+    "prophet_forecast",
     "quality_report",
     "resolve_org_unit_id",
     "standardise_county_names",
     "timeliness_report",
     "update_from_api",
+    "xgboost_forecast",
     "zero_report_analysis",
 ]
 
