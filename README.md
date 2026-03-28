@@ -15,6 +15,8 @@ KHIS Toolkit is built for people who work with county health data and need to mo
 - Render deployment guide: [docs/DEPLOY.md](docs/DEPLOY.md)
 - Release checklist: [docs/PRELAUNCH_CHECKLIST.md](docs/PRELAUNCH_CHECKLIST.md)
 - Launch copy: [docs/LAUNCH_POSTS.md](docs/LAUNCH_POSTS.md)
+- Pitch outline: [docs/PITCH.md](docs/PITCH.md)
+- KHIS outreach email draft: [docs/KHIS_OUTREACH_EMAIL.md](docs/KHIS_OUTREACH_EMAIL.md)
 - Expected Render URL after first deploy: `https://khis-toolkit-dashboard.onrender.com`
 
 ## Why This Exists
@@ -80,6 +82,22 @@ county_summary = khis.summarise_county_mental_health(mns)
 Deployment is configured in [render.yaml](render.yaml). Follow the [Render deployment guide](docs/DEPLOY.md) to publish the Flask dashboard with demo or KHIS credentials. Render will usually assign `https://khis-toolkit-dashboard.onrender.com` if the service name is available; confirm the actual URL after the first deploy and update this section if Render gives you a different subdomain.
 
 For the public portfolio/demo link, the recommended setup is `KHIS_DATA_MODE=offline_demo`. That keeps the dashboard stable even before KHIS credentials are granted, because it uses bundled county demo data instead of relying on external DHIS2/KHIS uptime.
+
+## Demo For KHIS Conversations
+
+The public Render link is intentionally designed to be a stable pre-access demo, not a claim of live KHIS connectivity. In `offline_demo` mode, the dashboard uses bundled county sample data to prove the workflow, interface, and county-review value without needing Ministry of Health credentials first.
+
+That makes the demo useful for three things:
+
+- showing the KHIS team what the county map, quality checks, and short-horizon forecast workflow will look like
+- demonstrating that the package already understands Kenya county structure and can support malaria and mental-health indicator paths
+- making a narrow ask for read-only access to validate one county workflow instead of requesting a broad national integration up front
+
+Recommended materials before you send the email:
+
+- public demo link
+- [docs/PITCH.md](docs/PITCH.md) for the walkthrough order
+- [docs/KHIS_OUTREACH_EMAIL.md](docs/KHIS_OUTREACH_EMAIL.md) for the first access-request draft
 
 ## All 47 Kenya Counties Supported
 

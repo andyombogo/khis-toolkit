@@ -60,6 +60,10 @@ def create_app() -> Flask:
         quality_table = create_quality_table(state.scorecard)
         selected_quality = _quality_payload(state, selected_county)
         selected_mental_health = _mental_health_payload(state, selected_county)
+        demo_context = _demo_context(state)
+        summary_cards = _summary_cards(state)
+        capability_cards = _capability_cards(state)
+        next_steps = _pilot_next_steps()
 
         return render_template_string(
             INDEX_TEMPLATE,
@@ -73,6 +77,10 @@ def create_app() -> Flask:
             selected_mental_health=selected_mental_health,
             indicator_name=state.indicator_name,
             last_updated=state.last_updated,
+            demo_context=demo_context,
+            summary_cards=summary_cards,
+            capability_cards=capability_cards,
+            next_steps=next_steps,
         )
 
     @app.get("/api/counties")
@@ -452,6 +460,150 @@ def _default_selected_county(
     return str(khis.list_counties().iloc[0]["name"])
 
 
+def _demo_context(state: DashboardState) -> dict[str, str]:
+    """Return pitch-ready copy that explains the current dashboard mode."""
+    mode_details = {
+        "offline_demo": {
+            "mode_label": "Offline demo",
+            "headline": "Pitch-ready county analytics walkthrough before KHIS access",
+            "summary": (
+                "This public link intentionally runs on bundled county demo data so "
+                "the workflow is stable during early conversations with the KHIS team."
+            ),
+            "next_step": (
+                "After access is granted, the same workflow can switch from demo "
+                "series to real KHIS credentials without rebuilding the dashboard."
+            ),
+        },
+        "dhis2_demo": {
+            "mode_label": "DHIS2 demo",
+            "headline": "County analytics workflow mapped from a public DHIS2 demo",
+            "summary": (
+                "This mode uses a public DHIS2 sandbox and maps the trends onto Kenya "
+                "county views for a product demonstration."
+            ),
+            "next_step": (
+                "Replace the demo credentials with KHIS access to validate real county "
+                "org units and indicator naming."
+            ),
+        },
+        "khis_live": {
+            "mode_label": "KHIS live",
+            "headline": "Live county analytics connected to KHIS credentials",
+            "summary": (
+                "This dashboard is connected to live credentials and is showing "
+                "county-style operational analytics from KHIS."
+            ),
+            "next_step": (
+                "The next step is validating indicator definitions, county mappings, "
+                "and review-meeting usefulness with the KHIS team."
+            ),
+        },
+        "auto": {
+            "mode_label": "Auto mode",
+            "headline": "County analytics workflow that adapts to the available data source",
+            "summary": (
+                "This mode decides between demo and live connections based on the "
+                "available credentials and runtime environment."
+            ),
+            "next_step": (
+                "For public demos, pin the deployment to offline demo mode so the "
+                "experience stays stable."
+            ),
+        },
+    }
+    return mode_details.get(state.data_mode, mode_details["auto"])
+
+
+def _summary_cards(state: DashboardState) -> list[dict[str, str]]:
+    """Return headline metrics that explain the demo scope at a glance."""
+    county_count = 0
+    period_count = 0
+    quality_count = 0
+    mental_health_count = 0
+
+    if "org_unit_name" in state.data.columns:
+        county_count = int(
+            state.data["org_unit_name"].dropna().astype(str).str.strip().nunique()
+        )
+    if "period" in state.data.columns:
+        period_count = int(
+            pd.to_datetime(state.data["period"], errors="coerce").nunique()
+        )
+    if "county" in state.scorecard.columns:
+        quality_count = int(
+            state.scorecard["county"].dropna().astype(str).str.strip().nunique()
+        )
+    if "county" in state.mental_health_summary.columns:
+        mental_health_count = int(
+            state.mental_health_summary["county"]
+            .dropna()
+            .astype(str)
+            .str.strip()
+            .nunique()
+        )
+
+    return [
+        {
+            "value": str(county_count),
+            "label": "counties covered",
+            "detail": "County-level trend and map view ready for walkthroughs.",
+        },
+        {
+            "value": str(period_count),
+            "label": "reporting periods",
+            "detail": "Enough history to show trend movement and short outlooks.",
+        },
+        {
+            "value": str(quality_count),
+            "label": "quality scorecards",
+            "detail": "Completeness and reporting issues surfaced before review meetings.",
+        },
+        {
+            "value": str(mental_health_count),
+            "label": "mental-health summaries",
+            "detail": "A second workflow beyond malaria to show how the toolkit can expand.",
+        },
+    ]
+
+
+def _capability_cards(state: DashboardState) -> list[dict[str, str]]:
+    """Return the three big things the demo should prove to reviewers."""
+    indicator_name = state.indicator_name
+    return [
+        {
+            "title": "County visibility",
+            "body": (
+                f"One dashboard brings the current county map, latest {indicator_name} "
+                "signal, and a selected county drill-down into one view."
+            ),
+        },
+        {
+            "title": "Quality before action",
+            "body": (
+                "Completeness, suspicious zeros, late reporting, and overall county "
+                "quality grades are visible before anyone trusts the chart."
+            ),
+        },
+        {
+            "title": "Pilot-ready next step",
+            "body": (
+                "The same structure can switch from demo data to KHIS credentials, "
+                "making this a realistic pilot conversation rather than a mockup."
+            ),
+        },
+    ]
+
+
+def _pilot_next_steps() -> list[str]:
+    """Return the short ask to make after showing the public demo."""
+    return [
+        "Validate one county workflow with a KHIS reviewer or county data team.",
+        "Swap the demo credentials for read-only KHIS access and verify real org-unit IDs.",
+        "Compare one live malaria or mental-health indicator pack against the existing review process.",
+    ]
+
+
 def _empty_trend_chart(county: str, indicator: str):
     """Return a readable placeholder chart when no trend data is available."""
     from plotly import graph_objects as go
@@ -536,7 +688,7 @@ INDEX_TEMPLATE = """
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>KHIS Toolkit Dashboard</title>
+    <title>KHIS Toolkit County Analytics Demo</title>
     <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
     <style>
       :root {
@@ -568,6 +720,14 @@ INDEX_TEMPLATE = """
         margin-bottom: 22px;
         font-size: 15px;
       }
+      .eyebrow {
+        margin: 0 0 10px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--leaf);
+      }
       .hero {
         display: grid;
         grid-template-columns: 280px 1fr;
@@ -590,9 +750,24 @@ INDEX_TEMPLATE = """
         margin-bottom: 10px;
         font-size: 30px;
       }
+      .mode-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: rgba(37,109,90,0.1);
+        color: var(--leaf);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
       .sidebar p {
         margin-top: 0;
         line-height: 1.5;
+      }
+      .sidebar-lead {
+        font-size: 17px;
       }
       label {
         display: block;
@@ -613,9 +788,76 @@ INDEX_TEMPLATE = """
         border-top: 1px solid var(--line);
         font-size: 14px;
       }
+      .note-card {
+        margin-top: 14px;
+        padding: 16px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, rgba(22,50,79,0.05), rgba(37,109,90,0.08));
+        border: 1px solid #c8d9d3;
+      }
+      .note-card h3 {
+        margin: 0 0 10px;
+        font-size: 18px;
+      }
+      .note-card p {
+        margin: 0;
+        font-size: 14px;
+      }
       .content {
         display: grid;
         gap: 22px;
+      }
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .summary-card {
+        padding: 18px;
+        border-radius: 16px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(246,250,255,0.96));
+        border: 1px solid #dfe7f2;
+      }
+      .summary-value {
+        font-size: 34px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .summary-label {
+        margin-top: 8px;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--leaf);
+      }
+      .summary-detail {
+        margin-top: 8px;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .section-copy {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 18px;
+      }
+      .capability-grid {
+        display: grid;
+        gap: 14px;
+      }
+      .capability-card {
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: #fbfcfe;
+        border: 1px solid #dfe7f2;
+      }
+      .capability-card h3 {
+        margin: 0 0 8px;
+        font-size: 19px;
+      }
+      .capability-card p {
+        margin: 0;
+        line-height: 1.55;
       }
       .map-wrap, .chart-wrap, .quality-wrap {
         padding: 18px;
@@ -623,6 +865,11 @@ INDEX_TEMPLATE = """
       .map-wrap h2, .chart-wrap h2, .quality-wrap h2 {
         margin: 0 0 12px;
         font-size: 24px;
+      }
+      .subtext {
+        margin: 0 0 16px;
+        color: #506070;
+        line-height: 1.55;
       }
       .map-frame {
         min-height: 480px;
@@ -643,8 +890,37 @@ INDEX_TEMPLATE = """
         display: inline-block;
         min-width: 140px;
       }
+      .mini-list {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid #dbe6f0;
+      }
+      .mini-list h4 {
+        margin: 0 0 8px;
+        font-size: 15px;
+      }
+      .mini-list ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+      .mini-list li {
+        margin-bottom: 6px;
+        line-height: 1.45;
+      }
+      .cta-list {
+        margin: 12px 0 0;
+        padding-left: 18px;
+      }
+      .cta-list li {
+        margin-bottom: 8px;
+        line-height: 1.5;
+      }
       @media (max-width: 980px) {
         .hero {
+          grid-template-columns: 1fr;
+        }
+        .summary-grid,
+        .section-copy {
           grid-template-columns: 1fr;
         }
         .sidebar {
@@ -658,8 +934,11 @@ INDEX_TEMPLATE = """
       <div class="banner">{{ banner }}</div>
       <div class="hero">
         <aside class="panel sidebar">
+          <div class="eyebrow">Kenya county analytics demo</div>
+          <div class="mode-pill">{{ demo_context.mode_label }}</div>
           <h1>KHIS Toolkit</h1>
-          <p>County dashboard for malaria trend review, data quality checks, short-horizon forecasting, and mental-health service monitoring.</p>
+          <p class="sidebar-lead">{{ demo_context.headline }}</p>
+          <p>{{ demo_context.summary }}</p>
           <label for="county-select">County</label>
           <select id="county-select">
             {% for county in counties %}
@@ -670,12 +949,22 @@ INDEX_TEMPLATE = """
             <div><strong>Indicator:</strong> {{ indicator_name }}</div>
             <div><strong>Last updated:</strong> {{ last_updated }}</div>
           </div>
+          <div class="note-card">
+            <h3>What happens after access is granted?</h3>
+            <p>{{ demo_context.next_step }}</p>
+          </div>
           <div class="detail-card" id="quality-detail">
             <div><strong>County:</strong> {{ selected_quality.county }}</div>
             <div><strong>Completeness:</strong> {{ selected_quality.completeness_score }}</div>
             <div><strong>Grade:</strong> {{ selected_quality.overall_quality_grade }}</div>
             <div><strong>Late reporter:</strong> {{ 'Yes' if selected_quality.late_reporter else 'No' }}</div>
             <div><strong>Suspicious zeros:</strong> {{ 'Yes' if selected_quality.suspicious_zeros else 'No' }}</div>
+            {% if selected_quality.summary %}
+            <div class="mini-list">
+              <h4>Why this matters</h4>
+              <div>{{ selected_quality.summary }}</div>
+            </div>
+            {% endif %}
           </div>
           <div class="detail-card" id="mental-health-detail">
             <div><strong>Mental Health:</strong> {{ selected_mental_health.burden_band or 'N/A' }}</div>
@@ -683,19 +972,64 @@ INDEX_TEMPLATE = """
             <div><strong>Latest total:</strong> {{ selected_mental_health.latest_total_value or 'N/A' }}</div>
             <div><strong>Trend:</strong> {{ selected_mental_health.trend_direction or 'N/A' }}</div>
             <div><strong>Data source:</strong> {{ selected_mental_health.data_source or 'N/A' }}</div>
+            {% if selected_mental_health.get('indicator_snapshot') %}
+            <div class="mini-list">
+              <h4>Latest indicator snapshot</h4>
+              <ul>
+                {% for row in selected_mental_health.get('indicator_snapshot', [])[:3] %}
+                <li>{{ row.indicator_name }}: {{ row.latest_value }} ({{ row.latest_period }})</li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
           </div>
         </aside>
         <main class="content">
+          <section class="summary-grid">
+            {% for card in summary_cards %}
+            <article class="panel summary-card">
+              <div class="summary-value">{{ card.value }}</div>
+              <div class="summary-label">{{ card.label }}</div>
+              <div class="summary-detail">{{ card.detail }}</div>
+            </article>
+            {% endfor %}
+          </section>
+          <section class="section-copy">
+            <article class="panel quality-wrap">
+              <h2>What This Demo Proves</h2>
+              <p class="subtext">This public link is designed for early KHIS conversations. It shows the workflow, the county framing, and the review value before any live credentials are shared.</p>
+              <div class="capability-grid">
+                {% for card in capability_cards %}
+                <div class="capability-card">
+                  <h3>{{ card.title }}</h3>
+                  <p>{{ card.body }}</p>
+                </div>
+                {% endfor %}
+              </div>
+            </article>
+            <article class="panel quality-wrap">
+              <h2>Pilot Ask</h2>
+              <p class="subtext">The smallest useful next step is a read-only validation pass with one county or one indicator pack. The product does not need a full national rollout to prove value.</p>
+              <ol class="cta-list">
+                {% for step in next_steps %}
+                <li>{{ step }}</li>
+                {% endfor %}
+              </ol>
+            </article>
+          </section>
           <section class="panel map-wrap">
             <h2>Kenya County Map</h2>
+            <p class="subtext">Latest county-level value for the selected indicator. In offline demo mode, the map uses stable bundled county series so the public walkthrough does not depend on live KHIS uptime.</p>
             <div class="map-frame">{{ map_html | safe }}</div>
           </section>
           <section class="panel chart-wrap">
             <h2>Trend and Forecast</h2>
+            <p class="subtext">Observed series and short-horizon forecast for the selected county. This is the part of the workflow that can later be validated against a real county reporting cycle.</p>
             <div id="trend-chart"></div>
           </section>
           <section class="panel quality-wrap">
             <h2>County Quality Scorecard</h2>
+            <p class="subtext">A county-facing view of completeness, outliers, timeliness, and suspicious zeros so that the data quality conversation happens before action is taken on the chart.</p>
             {{ quality_table | safe }}
           </section>
         </main>
@@ -754,22 +1088,42 @@ INDEX_TEMPLATE = """
 
         const qualityResponse = await fetch(`/api/quality/${encodeURIComponent(county)}`);
         const quality = await qualityResponse.json();
+        const qualitySummary = quality.summary ? `
+          <div class="mini-list">
+            <h4>Why this matters</h4>
+            <div>${quality.summary}</div>
+          </div>
+        ` : '';
         document.getElementById('quality-detail').innerHTML = `
           <div><strong>County:</strong> ${quality.county ?? county}</div>
           <div><strong>Completeness:</strong> ${quality.completeness_score ?? 'N/A'}</div>
           <div><strong>Grade:</strong> ${quality.overall_quality_grade ?? 'N/A'}</div>
           <div><strong>Late reporter:</strong> ${quality.late_reporter ? 'Yes' : 'No'}</div>
           <div><strong>Suspicious zeros:</strong> ${quality.suspicious_zeros ? 'Yes' : 'No'}</div>
+          ${qualitySummary}
         `;
 
         const mentalHealthResponse = await fetch(`/api/mental-health/${encodeURIComponent(county)}`);
         const mentalHealth = await mentalHealthResponse.json();
+        const mentalHealthSnapshot = Array.isArray(mentalHealth.indicator_snapshot) && mentalHealth.indicator_snapshot.length
+          ? `
+            <div class="mini-list">
+              <h4>Latest indicator snapshot</h4>
+              <ul>
+                ${mentalHealth.indicator_snapshot.slice(0, 3).map(row =>
+                  `<li>${row.indicator_name}: ${row.latest_value} (${row.latest_period})</li>`
+                ).join('')}
+              </ul>
+            </div>
+          `
+          : '';
         document.getElementById('mental-health-detail').innerHTML = `
           <div><strong>Mental Health:</strong> ${mentalHealth.burden_band ?? 'N/A'}</div>
           <div><strong>Tracked indicators:</strong> ${mentalHealth.tracked_indicators ?? 'N/A'}</div>
           <div><strong>Latest total:</strong> ${mentalHealth.latest_total_value ?? 'N/A'}</div>
           <div><strong>Trend:</strong> ${mentalHealth.trend_direction ?? 'N/A'}</div>
           <div><strong>Data source:</strong> ${mentalHealth.data_source ?? 'N/A'}</div>
+          ${mentalHealthSnapshot}
         `;
       }
 

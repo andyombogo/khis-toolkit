@@ -296,3 +296,75 @@ def test_dashboard_offline_mode_avoids_external_connector_calls(monkeypatch):
 
     assert response.status_code == 200
     assert response.get_json()["data_mode"] == "offline_demo"
+
+
+def test_dashboard_root_surfaces_pitch_ready_demo_copy():
+    """The homepage should explain that the public link is a pre-access KHIS demo."""
+    state = DashboardState(
+        data=pd.DataFrame(
+            {
+                "indicator_id": ["offline_malaria_cases"] * 2,
+                "indicator_name": ["Malaria Cases (Offline Demo)"] * 2,
+                "org_unit_id": ["OFFLINE_47"] * 2,
+                "org_unit_name": ["Nairobi", "Mombasa"],
+                "period": [pd.Timestamp("2024-11-01"), pd.Timestamp("2024-12-01")],
+                "value": [18.0, 15.0],
+            }
+        ),
+        scorecard=pd.DataFrame(
+            {
+                "county": ["Nairobi", "Mombasa"],
+                "completeness_score": [100.0, 92.0],
+                "outlier_count": [0, 1],
+                "late_reporter": [False, False],
+                "suspicious_zeros": [False, False],
+                "overall_quality_grade": ["A", "B"],
+            }
+        ),
+        mental_health_data=pd.DataFrame(
+            {
+                "indicator_id": ["demo_mental_health_outpatient_visits"],
+                "indicator_name": ["Mental Health Outpatient Visits"],
+                "indicator_slug": ["mental_health_outpatient_visits"],
+                "indicator_domain": ["Mental health services"],
+                "indicator_package": ["mns_core"],
+                "org_unit_id": ["KE47"],
+                "org_unit_name": ["Nairobi"],
+                "period": [pd.Timestamp("2024-12-01")],
+                "value": [21.0],
+                "data_source": ["demo_fallback"],
+            }
+        ),
+        mental_health_summary=pd.DataFrame(
+            {
+                "county": ["Nairobi"],
+                "latest_period": ["2024-12-01"],
+                "tracked_indicators": [1],
+                "latest_total_value": [21.0],
+                "average_latest_value": [21.0],
+                "trend_direction": ["Rising"],
+                "burden_band": ["High"],
+                "county_percentile": [1.0],
+                "data_source": ["demo_fallback"],
+            }
+        ),
+        quality_summary="Demo summary",
+        indicator_name="Malaria Cases (Offline Demo)",
+        indicator_id="offline_malaria_cases",
+        banner="Offline demo banner",
+        last_updated="2026-03-28 09:30 UTC",
+        data_mode="offline_demo",
+    )
+
+    with patch("dashboard.app._load_dashboard_state", return_value=state):
+        app = create_app()
+    app.config["TESTING"] = True
+
+    client = app.test_client()
+    response = client.get("/")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert "Pitch-ready county analytics walkthrough before KHIS access" in html
+    assert "What This Demo Proves" in html
+    assert "Pilot Ask" in html
