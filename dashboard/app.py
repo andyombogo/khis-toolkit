@@ -12,7 +12,12 @@ from flask import Flask, jsonify, render_template_string, request
 import pandas as pd
 
 import khis
-from dashboard.map import create_county_map, create_quality_table, create_trend_chart
+from dashboard.map import (
+    create_county_map,
+    create_quality_table,
+    create_trend_chart,
+    render_county_map_html,
+)
 from khis.connector import DEMO_BASE_URL, DEMO_PASSWORD, DEMO_USERNAME
 
 
@@ -56,7 +61,7 @@ def create_app() -> Flask:
         )
         latest_values = _latest_county_values(state.data)
         map_object = create_county_map(latest_values, value_col="latest_value")
-        map_html = map_object.get_root().render()
+        map_html = render_county_map_html(map_object)
         quality_table = create_quality_table(state.scorecard)
         selected_quality = _quality_payload(state, selected_county)
         selected_mental_health = _mental_health_payload(state, selected_county)

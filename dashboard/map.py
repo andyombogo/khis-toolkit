@@ -74,8 +74,8 @@ def create_county_map(
         columns=["county", value_col],
         key_on="feature.properties.county",
         fill_color="RdYlGn_r",
-        fill_opacity=0.75,
-        line_opacity=0.35,
+        fill_opacity=0.82,
+        line_opacity=0.85,
         nan_fill_color="#d9d9d9",
         legend_name=value_col.replace("_", " ").title(),
         highlight=True,
@@ -84,9 +84,14 @@ def create_county_map(
     folium.GeoJson(
         geojson,
         style_function=lambda feature: {
-            "color": "#4f4f4f",
-            "weight": 0.8,
-            "fillOpacity": 0.0,
+            "color": "#243b53",
+            "weight": 1.4,
+            "fillOpacity": 0.02,
+        },
+        highlight_function=lambda feature: {
+            "color": "#0f172a",
+            "weight": 2.2,
+            "fillOpacity": 0.18,
         },
         tooltip=GeoJsonTooltip(
             fields=["county", "region", "display_value"],
@@ -95,6 +100,8 @@ def create_county_map(
             sticky=False,
         ),
     ).add_to(map_object)
+
+    _fit_map_to_counties(map_object, merged)
 
     title_html = f"""
     <div style="position: fixed; top: 10px; left: 50px; z-index: 9999;
@@ -106,6 +113,21 @@ def create_county_map(
     """
     map_object.get_root().html.add_child(folium.Element(title_html))
     return map_object
+
+
+def render_county_map_html(map_object, aspect_ratio: str = "68%") -> str:
+    """Render the county map as embeddable HTML that behaves reliably in Flask."""
+    if isinstance(map_object, _FallbackMap):
+        return map_object.render()
+
+    html = map_object.get_root().render()
+    escaped = escape(html, quote=True)
+    return (
+        '<iframe title="KHIS Toolkit county map" '
+        'style="width:100%; min-height:520px; border:0; border-radius:14px;" '
+        'loading="lazy" referrerpolicy="no-referrer-when-downgrade" '
+        f'srcdoc="{escaped}"></iframe>'
+    )
 
 
 def create_trend_chart(df: pd.DataFrame, county: str, indicator: str):
@@ -290,3 +312,23 @@ def _simplified_county_geojson(merged: pd.DataFrame, value_col: str) -> dict[str
             }
         )
     return {"type": "FeatureCollection", "features": features}
+
+
+def _fit_map_to_counties(map_object, merged: pd.DataFrame) -> None:
+    """Fit the map viewport to the county centroids with a small padding."""
+    latitudes = pd.to_numeric(merged["latitude"], errors="coerce").dropna()
+    longitudes = pd.to_numeric(merged["longitude"], errors="coerce").dropna()
+    if latitudes.empty or longitudes.empty:
+        return
+
+    padding_lat = 0.8
+    padding_lon = 0.8
+    southwest = [
+        float(latitudes.min() - padding_lat),
+        float(longitudes.min() - padding_lon),
+    ]
+    northeast = [
+        float(latitudes.max() + padding_lat),
+        float(longitudes.max() + padding_lon),
+    ]
+    map_object.fit_bounds([southwest, northeast])

@@ -7,7 +7,12 @@ from unittest.mock import patch
 import pandas as pd
 
 from dashboard.app import DashboardState, create_app
-from dashboard.map import create_county_map, create_quality_table, create_trend_chart
+from dashboard.map import (
+    create_county_map,
+    create_quality_table,
+    create_trend_chart,
+    render_county_map_html,
+)
 
 
 def test_create_county_map_returns_renderable_object():
@@ -22,6 +27,23 @@ def test_create_county_map_returns_renderable_object():
     map_object = create_county_map(data, value_col="latest_value")
     rendered = map_object.get_root().render()
 
+    assert "Nairobi" in rendered
+
+
+def test_render_county_map_html_wraps_folium_output_for_dashboard():
+    """The dashboard should embed the county map as an iframe-backed HTML snippet."""
+    data = pd.DataFrame(
+        {
+            "county": ["Nairobi", "Mombasa", "Kisumu"],
+            "latest_value": [18.4, 12.0, 9.7],
+        }
+    )
+
+    map_object = create_county_map(data, value_col="latest_value")
+    rendered = render_county_map_html(map_object)
+
+    assert "<iframe" in rendered
+    assert "srcdoc=" in rendered
     assert "Nairobi" in rendered
 
 
@@ -368,3 +390,4 @@ def test_dashboard_root_surfaces_pitch_ready_demo_copy():
     assert "Pitch-ready county analytics walkthrough before KHIS access" in html
     assert "What This Demo Proves" in html
     assert "Pilot Ask" in html
+    assert "<iframe" in html
