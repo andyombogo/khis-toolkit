@@ -13,10 +13,9 @@ import pandas as pd
 
 import khis
 from dashboard.map import (
-    create_county_map,
     create_quality_table,
     create_trend_chart,
-    render_county_map_html,
+    render_selected_county_map_html,
 )
 from khis.connector import DEMO_BASE_URL, DEMO_PASSWORD, DEMO_USERNAME
 
@@ -60,8 +59,11 @@ def create_app() -> Flask:
             else _empty_trend_chart(selected_county, state.indicator_name)
         )
         latest_values = _latest_county_values(state.data)
-        map_object = create_county_map(latest_values, value_col="latest_value")
-        map_html = render_county_map_html(map_object)
+        map_html = render_selected_county_map_html(
+            latest_values,
+            value_col="latest_value",
+            selected_county=selected_county,
+        )
         quality_table = create_quality_table(state.scorecard)
         selected_quality = _quality_payload(state, selected_county)
         selected_mental_health = _mental_health_payload(state, selected_county)
@@ -92,6 +94,19 @@ def create_app() -> Flask:
     def api_counties():
         """Return the Kenya county reference list."""
         return jsonify(khis.list_counties().to_dict(orient="records"))
+
+    @app.get("/api/map/<county>")
+    def api_map(county: str):
+        """Return the rendered county map HTML with one county highlighted."""
+        state = _state(app)
+        latest_values = _latest_county_values(state.data)
+        resolved_county = _normalise_county_input(county)
+        map_html = render_selected_county_map_html(
+            latest_values,
+            value_col="latest_value",
+            selected_county=resolved_county,
+        )
+        return jsonify({"html": map_html, "county": resolved_county})
 
     @app.get("/api/forecast/<county>/<indicator>")
     def api_forecast(county: str, indicator: str):
@@ -1025,7 +1040,7 @@ INDEX_TEMPLATE = """
           <section class="panel map-wrap">
             <h2>Kenya County Map</h2>
             <p class="subtext">Latest county-level value for the selected indicator. In offline demo mode, the map uses stable bundled county series so the public walkthrough does not depend on live KHIS uptime.</p>
-            <div class="map-frame">{{ map_html | safe }}</div>
+            <div class="map-frame" id="county-map">{{ map_html | safe }}</div>
           </section>
           <section class="panel chart-wrap">
             <h2>Trend and Forecast</h2>
@@ -1046,6 +1061,10 @@ INDEX_TEMPLATE = """
 
       async function refreshCountyViews(county) {
         const indicatorPath = encodeURIComponent("{{ indicator_name }}");
+        const mapResponse = await fetch(`/api/map/${encodeURIComponent(county)}`);
+        const mapPayload = await mapResponse.json();
+        document.getElementById('county-map').innerHTML = mapPayload.html;
+
         const forecastResponse = await fetch(`/api/forecast/${encodeURIComponent(county)}/${indicatorPath}`);
         const forecastData = await forecastResponse.json();
 

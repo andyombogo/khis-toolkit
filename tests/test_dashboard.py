@@ -11,7 +11,7 @@ from dashboard.map import (
     create_county_map,
     create_quality_table,
     create_trend_chart,
-    render_county_map_html,
+    render_selected_county_map_html,
 )
 
 
@@ -30,8 +30,8 @@ def test_create_county_map_returns_renderable_object():
     assert "Nairobi" in rendered
 
 
-def test_render_county_map_html_wraps_folium_output_for_dashboard():
-    """The dashboard should embed the county map as an iframe-backed HTML snippet."""
+def test_render_selected_county_map_html_highlights_one_county():
+    """The dashboard map HTML should include a visible selected-county summary."""
     data = pd.DataFrame(
         {
             "county": ["Nairobi", "Mombasa", "Kisumu"],
@@ -39,12 +39,15 @@ def test_render_county_map_html_wraps_folium_output_for_dashboard():
         }
     )
 
-    map_object = create_county_map(data, value_col="latest_value")
-    rendered = render_county_map_html(map_object)
+    rendered = render_selected_county_map_html(
+        data,
+        value_col="latest_value",
+        selected_county="Nairobi",
+    )
 
-    assert "<iframe" in rendered
-    assert "srcdoc=" in rendered
+    assert "<svg" in rendered
     assert "Nairobi" in rendered
+    assert "Nairobi highlighted" in rendered
 
 
 def test_create_quality_table_renders_grade_labels():
@@ -151,6 +154,50 @@ def test_dashboard_exposes_mental_health_county_endpoint():
 
     assert response.status_code == 200
     assert response.get_json()["burden_band"] == "High"
+
+
+def test_dashboard_exposes_county_map_endpoint():
+    """The dashboard should return county map HTML for the selected county."""
+    state = DashboardState(
+        data=pd.DataFrame(
+            {
+                "indicator_id": ["offline_malaria_cases"] * 2,
+                "indicator_name": ["Malaria Cases (Offline Demo)"] * 2,
+                "org_unit_id": ["OFFLINE_47", "OFFLINE_01"],
+                "org_unit_name": ["Nairobi", "Mombasa"],
+                "period": [pd.Timestamp("2024-12-01"), pd.Timestamp("2024-12-01")],
+                "value": [18.0, 14.0],
+            }
+        ),
+        scorecard=pd.DataFrame(
+            {
+                "county": ["Nairobi", "Mombasa"],
+                "completeness_score": [100.0, 98.0],
+                "outlier_count": [0, 1],
+                "late_reporter": [False, False],
+                "suspicious_zeros": [False, False],
+                "overall_quality_grade": ["A", "B"],
+            }
+        ),
+        mental_health_data=pd.DataFrame(),
+        mental_health_summary=pd.DataFrame(),
+        quality_summary="Demo summary",
+        indicator_name="Malaria Cases (Offline Demo)",
+        indicator_id="offline_malaria_cases",
+        banner="Offline demo banner",
+        last_updated="2026-03-30 12:00 UTC",
+        data_mode="offline_demo",
+    )
+    with patch("dashboard.app._load_dashboard_state", return_value=state):
+        app = create_app()
+    app.config["TESTING"] = True
+
+    client = app.test_client()
+    response = client.get("/api/map/Nairobi")
+
+    assert response.status_code == 200
+    assert "<svg" in response.get_json()["html"]
+    assert response.get_json()["county"] == "Nairobi"
 
 
 def test_dashboard_forecast_endpoint_falls_back_to_observed_series():
@@ -390,4 +437,4 @@ def test_dashboard_root_surfaces_pitch_ready_demo_copy():
     assert "Pitch-ready county analytics walkthrough before KHIS access" in html
     assert "What This Demo Proves" in html
     assert "Pilot Ask" in html
-    assert "<iframe" in html
+    assert "<svg" in html

@@ -51,9 +51,7 @@ def create_county_map(
             f"create_county_map() requires '{value_col}' in the input data."
         )
 
-    counties_df = list_counties().rename(columns={"name": "county"})
-    merged = counties_df.merge(data_df[["county", value_col]], on="county", how="left")
-    merged[value_col] = pd.to_numeric(merged[value_col], errors="coerce")
+    merged = _merge_county_values(data_df, value_col=value_col)
 
     if folium is None:
         return _FallbackMap(
@@ -127,6 +125,22 @@ def render_county_map_html(map_object, aspect_ratio: str = "68%") -> str:
         'style="width:100%; min-height:520px; border:0; border-radius:14px;" '
         'loading="lazy" referrerpolicy="no-referrer-when-downgrade" '
         f'srcdoc="{escaped}"></iframe>'
+    )
+
+
+def render_selected_county_map_html(
+    data_df: pd.DataFrame,
+    value_col: str,
+    selected_county: str | None = None,
+    title: str = "Kenya County Health Map",
+) -> str:
+    """Render a stable inline county map with the selected county highlighted."""
+    merged = _merge_county_values(data_df, value_col=value_col)
+    return _svg_county_map_html(
+        merged,
+        value_col=value_col,
+        selected_county=selected_county,
+        title=title,
     )
 
 
@@ -279,6 +293,14 @@ def _fallback_map_html(merged: pd.DataFrame, value_col: str, title: str) -> str:
     """
 
 
+def _merge_county_values(data_df: pd.DataFrame, value_col: str) -> pd.DataFrame:
+    """Join Kenya county metadata onto the current county values."""
+    counties_df = list_counties().rename(columns={"name": "county"})
+    merged = counties_df.merge(data_df[["county", value_col]], on="county", how="left")
+    merged[value_col] = pd.to_numeric(merged[value_col], errors="coerce")
+    return merged
+
+
 def _simplified_county_geojson(merged: pd.DataFrame, value_col: str) -> dict[str, Any]:
     """Build a simplified county polygon GeoJSON from stored county centroids."""
     features = []
@@ -332,3 +354,129 @@ def _fit_map_to_counties(map_object, merged: pd.DataFrame) -> None:
         float(longitudes.max() + padding_lon),
     ]
     map_object.fit_bounds([southwest, northeast])
+
+
+def _svg_county_map_html(
+    merged: pd.DataFrame,
+    value_col: str,
+    selected_county: str | None,
+    title: str,
+) -> str:
+    """Render a reliable inline SVG map for the dashboard demo."""
+    width = 920
+    height = 560
+    margin = 34
+    lon_step = 0.38
+    lat_step = 0.28
+
+    lon_min = float((merged["longitude"] - lon_step).min()) - 0.2
+    lon_max = float((merged["longitude"] + lon_step).max()) + 0.2
+    lat_min = float((merged["latitude"] - lat_step).min()) - 0.2
+    lat_max = float((merged["latitude"] + lat_step).max()) + 0.2
+
+    def _project(lon: float, lat: float) -> tuple[float, float]:
+        x = margin + ((lon - lon_min) / (lon_max - lon_min)) * (width - 2 * margin)
+        y = (
+            height
+            - margin
+            - ((lat - lat_min) / (lat_max - lat_min)) * (height - 2 * margin)
+        )
+        return round(x, 1), round(y, 1)
+
+    values = pd.to_numeric(merged[value_col], errors="coerce")
+    finite_values = values.dropna()
+    min_value = float(finite_values.min()) if not finite_values.empty else 0.0
+    max_value = float(finite_values.max()) if not finite_values.empty else 1.0
+    selected_label = str(selected_county).strip() if selected_county else ""
+
+    polygons: list[str] = []
+    selected_summary = {
+        "county": selected_label or "No county selected",
+        "region": "N/A",
+        "value": "No data",
+    }
+    for row in merged.to_dict(orient="records"):
+        polygon = [
+            (float(row["longitude"]) - lon_step, float(row["latitude"]) - lat_step),
+            (float(row["longitude"]) + lon_step, float(row["latitude"]) - lat_step),
+            (float(row["longitude"]) + lon_step, float(row["latitude"]) + lat_step),
+            (float(row["longitude"]) - lon_step, float(row["latitude"]) + lat_step),
+        ]
+        point_string = " ".join(
+            f"{x},{y}" for x, y in (_project(lon, lat) for lon, lat in polygon)
+        )
+        value = row.get(value_col)
+        is_selected = str(row["county"]) == selected_label
+        fill = _county_fill_color(value, min_value=min_value, max_value=max_value)
+        stroke = "#0f172a" if is_selected else "#385170"
+        stroke_width = "4" if is_selected else "1.25"
+        opacity = "1.0" if is_selected else "0.92"
+        display_value = "No data" if pd.isna(value) else f"{float(value):.1f}"
+        if is_selected:
+            selected_summary = {
+                "county": str(row["county"]),
+                "region": str(row["region"]),
+                "value": display_value,
+            }
+        polygons.append(f"""
+            <polygon points="{point_string}" fill="{fill}" stroke="{stroke}"
+              stroke-width="{stroke_width}" fill-opacity="{opacity}">
+              <title>{escape(str(row['county']))} | {escape(str(row['region']))} | {escape(display_value)}</title>
+            </polygon>
+            """)
+
+    indicator_label = value_col.replace("_", " ").title()
+    selected_copy = (
+        f"{escape(selected_summary['county'])} highlighted"
+        if selected_label
+        else "Select a county to highlight it on the map"
+    )
+    return f"""
+    <div style="background:#f8fbff; border:1px solid #dbe6f0; border-radius:16px; overflow:hidden;">
+      <div style="display:flex; justify-content:space-between; gap:18px; padding:16px 18px 8px; font-family:Georgia, serif; flex-wrap:wrap;">
+        <div>
+          <div style="font-size:20px; font-weight:700; color:#16324f;">{escape(title)}</div>
+          <div style="margin-top:6px; color:#476175; font-size:14px;">{escape(selected_copy)}</div>
+        </div>
+        <div style="display:flex; gap:18px; flex-wrap:wrap; color:#16324f; font-size:14px;">
+          <div><strong>County:</strong> {escape(selected_summary['county'])}</div>
+          <div><strong>Region:</strong> {escape(selected_summary['region'])}</div>
+          <div><strong>{escape(indicator_label)}:</strong> {escape(selected_summary['value'])}</div>
+        </div>
+      </div>
+      <svg viewBox="0 0 {width} {height}" style="display:block; width:100%; height:auto; background:linear-gradient(180deg, #eef5fb 0%, #f9fcff 100%);">
+        <rect x="0" y="0" width="{width}" height="{height}" fill="transparent"></rect>
+        {''.join(polygons)}
+      </svg>
+      <div style="padding:10px 18px 18px; font-family:Georgia, serif; font-size:13px; color:#506070;">
+        Simplified county geometry for a stable offline demo. The selected county is outlined in dark navy.
+      </div>
+    </div>
+    """
+
+
+def _county_fill_color(value: Any, min_value: float, max_value: float) -> str:
+    """Return a county fill color on a green-yellow-red scale."""
+    if pd.isna(value):
+        return "#e5e7eb"
+    if max_value <= min_value:
+        ratio = 0.5
+    else:
+        ratio = (float(value) - min_value) / (max_value - min_value)
+
+    palette = [
+        (26, 152, 80),
+        (254, 224, 139),
+        (215, 48, 39),
+    ]
+    if ratio <= 0.5:
+        local = ratio / 0.5
+        start, end = palette[0], palette[1]
+    else:
+        local = (ratio - 0.5) / 0.5
+        start, end = palette[1], palette[2]
+
+    red = int(start[0] + (end[0] - start[0]) * local)
+    green = int(start[1] + (end[1] - start[1]) * local)
+    blue = int(start[2] + (end[2] - start[2]) * local)
+    return f"rgb({red},{green},{blue})"
