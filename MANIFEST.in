@@ -1,5 +1,6 @@
 include README.md
 include LICENSE
 recursive-include khis *.py
+recursive-include khis/data *.geojson *.md
 recursive-include dashboard *.py
 recursive-include src *.py

@@ -27,6 +27,7 @@ Kenya county teams already use DHIS2/KHIS, but the analytics gap remains real: p
 
 - Connects to DHIS2 or KHIS and pulls indicator data with a clean Python interface.
 - Resolves all 47 Kenya counties with county metadata and placeholder-to-live DHIS2 ID support.
+- Bundles real Kenya county boundary geometry for a more credible county dashboard demo.
 - Cleans KHIS data quirks such as period parsing, duplicate rows, missingness flags, and bounded imputation.
 - Generates county data quality scorecards with completeness, outlier, timeliness, and suspicious-zero checks.
 - Produces Prophet, XGBoost, and ensemble forecasts together with a county-facing Flask dashboard.

@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from html import escape
+from importlib.resources import files
+import json
 from typing import Any
 
 import pandas as pd
@@ -64,7 +67,7 @@ def create_county_map(
         tiles="CartoDB positron",
         control_scale=True,
     )
-    geojson = _simplified_county_geojson(merged, value_col=value_col)
+    geojson = _county_boundary_geojson(merged, value_col=value_col)
 
     folium.Choropleth(
         geo_data=geojson,
@@ -301,6 +304,53 @@ def _merge_county_values(data_df: pd.DataFrame, value_col: str) -> pd.DataFrame:
     return merged
 
 
+@lru_cache(maxsize=1)
+def _load_county_boundary_geojson() -> dict[str, Any] | None:
+    """Load the bundled Kenya county boundary GeoJSON if available."""
+    try:
+        resource = files("khis").joinpath("data/kenya_counties.geojson")
+        with resource.open("r", encoding="utf-8") as handle:
+            return json.load(handle)
+    except FileNotFoundError:
+        return None
+
+
+def _county_boundary_geojson(merged: pd.DataFrame, value_col: str) -> dict[str, Any]:
+    """Return county boundary GeoJSON enriched with dashboard values."""
+    source = _load_county_boundary_geojson()
+    if not source:
+        return _simplified_county_geojson(merged, value_col=value_col)
+
+    county_lookup = {
+        str(row["county"]): row for row in merged.to_dict(orient="records")
+    }
+    features: list[dict[str, Any]] = []
+    for feature in source.get("features", []):
+        properties = dict(feature.get("properties", {}))
+        county_name = str(properties.get("county", "")).strip()
+        row = county_lookup.get(county_name)
+        raw_value = row.get(value_col) if row else None
+        properties.update(
+            {
+                "county": county_name,
+                "region": row.get("region", "Unknown") if row else "Unknown",
+                "display_value": (
+                    "No data" if pd.isna(raw_value) else round(float(raw_value), 2)
+                ),
+                "raw_value": None if pd.isna(raw_value) else float(raw_value),
+            }
+        )
+        features.append(
+            {
+                "type": "Feature",
+                "properties": properties,
+                "geometry": feature.get("geometry"),
+            }
+        )
+
+    return {"type": "FeatureCollection", "features": features}
+
+
 def _simplified_county_geojson(merged: pd.DataFrame, value_col: str) -> dict[str, Any]:
     """Build a simplified county polygon GeoJSON from stored county centroids."""
     features = []
@@ -366,13 +416,23 @@ def _svg_county_map_html(
     width = 920
     height = 560
     margin = 34
-    lon_step = 0.38
-    lat_step = 0.28
+    geojson = _county_boundary_geojson(merged, value_col=value_col)
+    rings_by_feature = [
+        _feature_outer_rings(feature.get("geometry")) for feature in geojson["features"]
+    ]
+    points = [
+        coord
+        for feature_rings in rings_by_feature
+        for ring in feature_rings
+        for coord in ring
+    ]
+    if not points:
+        return _fallback_map_html(merged, value_col=value_col, title=title)
 
-    lon_min = float((merged["longitude"] - lon_step).min()) - 0.2
-    lon_max = float((merged["longitude"] + lon_step).max()) + 0.2
-    lat_min = float((merged["latitude"] - lat_step).min()) - 0.2
-    lat_max = float((merged["latitude"] + lat_step).max()) + 0.2
+    lon_min = min(float(lon) for lon, _ in points) - 0.2
+    lon_max = max(float(lon) for lon, _ in points) + 0.2
+    lat_min = min(float(lat) for _, lat in points) - 0.2
+    lat_max = max(float(lat) for _, lat in points) + 0.2
 
     def _project(lon: float, lat: float) -> tuple[float, float]:
         x = margin + ((lon - lon_min) / (lon_max - lon_min)) * (width - 2 * margin)
@@ -395,35 +455,37 @@ def _svg_county_map_html(
         "region": "N/A",
         "value": "No data",
     }
-    for row in merged.to_dict(orient="records"):
-        polygon = [
-            (float(row["longitude"]) - lon_step, float(row["latitude"]) - lat_step),
-            (float(row["longitude"]) + lon_step, float(row["latitude"]) - lat_step),
-            (float(row["longitude"]) + lon_step, float(row["latitude"]) + lat_step),
-            (float(row["longitude"]) - lon_step, float(row["latitude"]) + lat_step),
-        ]
-        point_string = " ".join(
-            f"{x},{y}" for x, y in (_project(lon, lat) for lon, lat in polygon)
-        )
-        value = row.get(value_col)
-        is_selected = str(row["county"]) == selected_label
-        fill = _county_fill_color(value, min_value=min_value, max_value=max_value)
+    for feature, rings in zip(geojson["features"], rings_by_feature):
+        props = feature.get("properties", {})
+        county_name = str(props.get("county", "")).strip()
+        region = str(props.get("region", "Unknown"))
+        raw_value = props.get("raw_value")
+        is_selected = county_name == selected_label
+        fill = _county_fill_color(raw_value, min_value=min_value, max_value=max_value)
         stroke = "#0f172a" if is_selected else "#385170"
         stroke_width = "4" if is_selected else "1.25"
         opacity = "1.0" if is_selected else "0.92"
-        display_value = "No data" if pd.isna(value) else f"{float(value):.1f}"
+        display_value = "No data" if pd.isna(raw_value) else f"{float(raw_value):.1f}"
         if is_selected:
             selected_summary = {
-                "county": str(row["county"]),
-                "region": str(row["region"]),
+                "county": county_name,
+                "region": region,
                 "value": display_value,
             }
-        polygons.append(f"""
-            <polygon points="{point_string}" fill="{fill}" stroke="{stroke}"
-              stroke-width="{stroke_width}" fill-opacity="{opacity}">
-              <title>{escape(str(row['county']))} | {escape(str(row['region']))} | {escape(display_value)}</title>
-            </polygon>
-            """)
+        title_text = (
+            f"{escape(county_name)} | {escape(region)} | {escape(display_value)}"
+        )
+        for ring in rings:
+            point_string = " ".join(
+                f"{x},{y}"
+                for x, y in (_project(float(lon), float(lat)) for lon, lat in ring)
+            )
+            polygons.append(f"""
+                <polygon points="{point_string}" fill="{fill}" stroke="{stroke}"
+                  stroke-width="{stroke_width}" fill-opacity="{opacity}">
+                  <title>{title_text}</title>
+                </polygon>
+                """)
 
     indicator_label = value_col.replace("_", " ").title()
     selected_copy = (
@@ -449,10 +511,24 @@ def _svg_county_map_html(
         {''.join(polygons)}
       </svg>
       <div style="padding:10px 18px 18px; font-family:Georgia, serif; font-size:13px; color:#506070;">
-        Simplified county geometry for a stable offline demo. The selected county is outlined in dark navy.
+        Real Kenya county boundaries bundled for the demo. The selected county is outlined in dark navy.
       </div>
     </div>
     """
+
+
+def _feature_outer_rings(geometry: Any) -> list[list[list[float]]]:
+    """Return the outer polygon rings from Polygon or MultiPolygon geometry."""
+    if not isinstance(geometry, dict):
+        return []
+
+    geometry_type = geometry.get("type")
+    coordinates = geometry.get("coordinates", [])
+    if geometry_type == "Polygon":
+        return [coordinates[0]] if coordinates else []
+    if geometry_type == "MultiPolygon":
+        return [polygon[0] for polygon in coordinates if polygon]
+    return []
 
 
 def _county_fill_color(value: Any, min_value: float, max_value: float) -> str:
