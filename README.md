@@ -100,7 +100,7 @@ Recommended materials before you send the email:
 - [docs/PITCH.md](docs/PITCH.md) for the walkthrough order
 - [docs/KHIS_OUTREACH_EMAIL.md](docs/KHIS_OUTREACH_EMAIL.md) for the first access-request draft
 
-## All 47 Kenya Counties Supported
+## Sample Kenya Counties
 
 | County | Region | Placeholder DHIS2 ID |
 | --- | --- | --- |
