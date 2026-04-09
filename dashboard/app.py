@@ -18,6 +18,7 @@ from dashboard.map import (
     render_selected_county_map_html,
 )
 from khis.connector import DEMO_BASE_URL, DEMO_PASSWORD, DEMO_USERNAME
+from khis.pilot import build_pilot_feedback_payload
 
 
 @dataclass
@@ -67,6 +68,12 @@ def create_app() -> Flask:
         quality_table = create_quality_table(state.scorecard)
         selected_quality = _quality_payload(state, selected_county)
         selected_mental_health = _mental_health_payload(state, selected_county)
+        selected_feedback = _pilot_feedback_payload(
+            state,
+            selected_county,
+            quality_payload=selected_quality,
+            mental_health_payload=selected_mental_health,
+        )
         demo_context = _demo_context(state)
         summary_cards = _summary_cards(state)
         capability_cards = _capability_cards(state)
@@ -82,6 +89,7 @@ def create_app() -> Flask:
             selected_county=selected_county,
             selected_quality=selected_quality,
             selected_mental_health=selected_mental_health,
+            selected_feedback=selected_feedback,
             indicator_name=state.indicator_name,
             last_updated=state.last_updated,
             demo_context=demo_context,
@@ -139,6 +147,12 @@ def create_app() -> Flask:
         """Return the mental-health summary row for one selected county."""
         state = _state(app)
         return jsonify(_mental_health_payload(state, _normalise_county_input(county)))
+
+    @app.get("/api/pilot-feedback/<county>")
+    def api_pilot_feedback(county: str):
+        """Return a structured pilot-feedback prompt for one county walkthrough."""
+        state = _state(app)
+        return jsonify(_pilot_feedback_payload(state, _normalise_county_input(county)))
 
     @app.get("/health")
     def health():
@@ -680,6 +694,24 @@ def _mental_health_payload(state: DashboardState, county: str) -> dict[str, obje
     return payload
 
 
+def _pilot_feedback_payload(
+    state: DashboardState,
+    county: str,
+    quality_payload: dict[str, object] | None = None,
+    mental_health_payload: dict[str, object] | None = None,
+) -> dict[str, object]:
+    """Return a county-specific pilot-feedback pack for the dashboard."""
+    quality = quality_payload or _quality_payload(state, county)
+    mental_health = mental_health_payload or _mental_health_payload(state, county)
+    return build_pilot_feedback_payload(
+        county=county,
+        indicator_name=state.indicator_name,
+        data_mode=state.data_mode,
+        quality_payload=quality,
+        mental_health_payload=mental_health,
+    )
+
+
 def _resolve_indicator_name(state: DashboardState, indicator_path_value: str) -> str:
     """Resolve a path parameter into the cached indicator name."""
     candidate = unquote(indicator_path_value).replace("_", " ").strip().lower()
@@ -935,6 +967,48 @@ INDEX_TEMPLATE = """
         margin-bottom: 8px;
         line-height: 1.5;
       }
+      .feedback-list {
+        margin: 14px 0 0;
+        padding-left: 18px;
+      }
+      .feedback-list li {
+        margin-bottom: 8px;
+        line-height: 1.5;
+      }
+      .briefing-box {
+        margin-top: 16px;
+        padding: 14px 16px;
+        border: 1px dashed var(--line);
+        border-radius: 16px;
+        background: #fffaf3;
+        color: var(--ink);
+        white-space: pre-wrap;
+        font-size: 0.95rem;
+        line-height: 1.6;
+      }
+      .copy-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+      .copy-button {
+        border: none;
+        border-radius: 999px;
+        padding: 10px 16px;
+        background: var(--leaf);
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .copy-button:hover {
+        filter: brightness(0.97);
+      }
+      .copy-status {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
       @media (max-width: 980px) {
         .hero {
           grid-template-columns: 1fr;
@@ -1036,6 +1110,25 @@ INDEX_TEMPLATE = """
                 {% endfor %}
               </ol>
             </article>
+            <article class="panel quality-wrap">
+              <h2>Pilot Feedback Pack</h2>
+              <p class="subtext">Use this right after the walkthrough so one county validation pass turns into concrete KHIS feedback instead of vague follow-up.</p>
+              <div class="detail-card" id="pilot-feedback-meta">
+                <div><strong>Focus:</strong> {{ selected_feedback.review_focus }}</div>
+                <div><strong>Reviewer:</strong> {{ selected_feedback.recommended_reviewer }}</div>
+                <div><strong>Next action:</strong> {{ selected_feedback.suggested_next_action }}</div>
+              </div>
+              <ul class="feedback-list" id="pilot-feedback-questions">
+                {% for question in selected_feedback.validation_questions %}
+                <li>{{ question }}</li>
+                {% endfor %}
+              </ul>
+              <div class="briefing-box" id="pilot-feedback-briefing">{{ selected_feedback.briefing_note }}</div>
+              <div class="copy-row">
+                <button type="button" class="copy-button" id="copy-feedback-button">Copy Feedback Brief</button>
+                <div class="copy-status" id="copy-feedback-status" aria-live="polite"></div>
+              </div>
+            </article>
           </section>
           <section class="panel map-wrap">
             <h2>Kenya County Map</h2>
@@ -1058,6 +1151,25 @@ INDEX_TEMPLATE = """
     <script>
       const chartFigure = {{ chart_json | safe }};
       Plotly.newPlot('trend-chart', chartFigure.data, chartFigure.layout, {responsive: true});
+      let currentFeedbackBrief = {{ selected_feedback.briefing_note | tojson }};
+      const feedbackBriefing = document.getElementById('pilot-feedback-briefing');
+      const feedbackStatus = document.getElementById('copy-feedback-status');
+
+      function renderPilotFeedback(feedback) {
+        document.getElementById('pilot-feedback-meta').innerHTML = `
+          <div><strong>Focus:</strong> ${feedback.review_focus ?? 'N/A'}</div>
+          <div><strong>Reviewer:</strong> ${feedback.recommended_reviewer ?? 'N/A'}</div>
+          <div><strong>Next action:</strong> ${feedback.suggested_next_action ?? 'N/A'}</div>
+        `;
+
+        const questions = Array.isArray(feedback.validation_questions)
+          ? feedback.validation_questions.map(question => `<li>${question}</li>`).join('')
+          : '';
+        document.getElementById('pilot-feedback-questions').innerHTML = questions;
+        currentFeedbackBrief = feedback.briefing_note ?? '';
+        feedbackBriefing.textContent = currentFeedbackBrief;
+        feedbackStatus.textContent = '';
+      }
 
       async function refreshCountyViews(county) {
         const indicatorPath = encodeURIComponent("{{ indicator_name }}");
@@ -1149,7 +1261,28 @@ INDEX_TEMPLATE = """
           <div><strong>Data source:</strong> ${mentalHealth.data_source ?? 'N/A'}</div>
           ${mentalHealthSnapshot}
         `;
+
+        const feedbackResponse = await fetch(`/api/pilot-feedback/${encodeURIComponent(county)}`);
+        const feedback = await feedbackResponse.json();
+        renderPilotFeedback(feedback);
       }
+
+      document.getElementById('copy-feedback-button').addEventListener('click', async () => {
+        if (!currentFeedbackBrief) {
+          feedbackStatus.textContent = 'No feedback brief is available yet.';
+          return;
+        }
+        if (!navigator.clipboard || !navigator.clipboard.writeText) {
+          feedbackStatus.textContent = 'Clipboard access is unavailable. Copy the brief from the box below.';
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(currentFeedbackBrief);
+          feedbackStatus.textContent = 'Feedback brief copied.';
+        } catch (error) {
+          feedbackStatus.textContent = 'Clipboard access failed. Copy the brief from the box below.';
+        }
+      });
 
       document.getElementById('county-select').addEventListener('change', (event) => {
         refreshCountyViews(event.target.value);

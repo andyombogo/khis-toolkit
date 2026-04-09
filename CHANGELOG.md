@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added a reusable pilot-feedback pack for one-county KHIS validation, with dashboard and API endpoints that turn demo walkthroughs into structured follow-up questions and next actions.
 - Added a Kenya mental-health workflow with curated MNS indicator packages, live KHIS resolution helpers, deterministic demo fallbacks, and county summary utilities.
 - Added FastAPI and Flask dashboard support for county mental-health snapshots alongside the existing malaria-focused workflows.
 - Updated the README, API guide, and roadmap to surface the new mental-health workflow as a first-class public feature.

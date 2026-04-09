@@ -81,6 +81,7 @@ def _cached_state() -> CachedAPIState:
         indicator_id="offline_malaria_cases",
         last_updated="2026-03-27 12:00 UTC",
         banner="Offline test state",
+        data_mode="offline_demo",
     )
 
 
@@ -120,6 +121,7 @@ def test_quality_and_forecast_endpoints_use_cached_state():
     quality = client.get("/quality/Nairobi")
     mental_health = client.get("/mental-health/Nairobi")
     mental_health_summary = client.get("/mental-health/summary")
+    pilot_feedback = client.get("/pilot-feedback/Nairobi")
     forecast = client.post(
         "/forecast",
         json={
@@ -137,6 +139,9 @@ def test_quality_and_forecast_endpoints_use_cached_state():
     assert len(mental_health.json()["indicator_snapshot"]) == 2
     assert mental_health_summary.status_code == 200
     assert mental_health_summary.json()[0]["county"] == "Nairobi"
+    assert pilot_feedback.status_code == 200
+    assert pilot_feedback.json()["county"] == "Nairobi"
+    assert len(pilot_feedback.json()["validation_questions"]) == 5
     assert forecast.status_code == 200
     assert len(forecast.json()) >= 2
 

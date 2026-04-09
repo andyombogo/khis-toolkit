@@ -14,6 +14,7 @@ import pandas as pd
 
 import khis
 from khis.connector import DEMO_BASE_URL, DEMO_PASSWORD, DEMO_USERNAME
+from khis.pilot import build_pilot_feedback_payload
 
 VERSION = "0.1.0"
 
@@ -48,6 +49,7 @@ class CachedAPIState:
     indicator_id: str
     last_updated: str
     banner: str
+    data_mode: str
 
 
 def create_app(api_key: str | None = None) -> FastAPI:
@@ -155,14 +157,9 @@ def create_app(api_key: str | None = None) -> FastAPI:
         """Return the quality scorecard row for one county from the cached dataset."""
         state = _ensure_cached_state(app)
         county_name = _resolve_county_name(county)
-        row = state.scorecard[state.scorecard["county"].astype(str) == county_name]
-        if row.empty:
-            raise HTTPException(
-                status_code=404, detail=f"No quality scorecard found for {county_name}."
-            )
-        payload = row.iloc[0].to_dict()
-        payload["summary"] = state.summary
-        payload["indicator"] = state.indicator_name
+        payload = _quality_payload(state, county_name)
+        if "message" in payload:
+            raise HTTPException(status_code=404, detail=payload["message"])
         return payload
 
     @app.get("/mental-health/indicators", dependencies=[Depends(require_api_key)])
@@ -185,6 +182,13 @@ def create_app(api_key: str | None = None) -> FastAPI:
         state = _ensure_cached_state(app)
         county_name = _resolve_county_name(county)
         return _mental_health_payload(state, county_name)
+
+    @app.get("/pilot-feedback/{county}", dependencies=[Depends(require_api_key)])
+    def pilot_feedback(county: str) -> dict[str, Any]:
+        """Return a structured county-validation prompt for pilot follow-up."""
+        state = _ensure_cached_state(app)
+        county_name = _resolve_county_name(county)
+        return _pilot_feedback_payload(state, county_name)
 
     return app
 
@@ -260,6 +264,7 @@ def _load_cached_state() -> CachedAPIState:
         indicator_id=indicator_id,
         last_updated=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
         banner=banner,
+        data_mode=data_mode,
     )
 
 
@@ -465,6 +470,34 @@ def _mental_health_payload(
     payload = summary_row.iloc[0].to_dict()
     payload["indicator_snapshot"] = snapshot.to_dict(orient="records")
     return payload
+
+
+def _quality_payload(state: CachedAPIState, county_name: str) -> dict[str, Any]:
+    """Return one county's quality row plus the cached summary string."""
+    row = state.scorecard[state.scorecard["county"].astype(str) == county_name]
+    if row.empty:
+        return {
+            "county": county_name,
+            "message": f"No quality scorecard found for {county_name}.",
+        }
+    payload = row.iloc[0].to_dict()
+    payload["summary"] = state.summary
+    payload["indicator"] = state.indicator_name
+    return payload
+
+
+def _pilot_feedback_payload(
+    state: CachedAPIState,
+    county_name: str,
+) -> dict[str, Any]:
+    """Return a county-specific pilot-feedback pack from the cached API state."""
+    return build_pilot_feedback_payload(
+        county=county_name,
+        indicator_name=state.indicator_name,
+        data_mode=state.data_mode,
+        quality_payload=_quality_payload(state, county_name),
+        mental_health_payload=_mental_health_payload(state, county_name),
+    )
 
 
 app = create_app()

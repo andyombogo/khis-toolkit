@@ -65,6 +65,17 @@ curl -H "X-API-Key: your-key-if-enabled" \
   "http://127.0.0.1:8000/quality/Nairobi"
 ```
 
+## GET /pilot-feedback/{county}
+
+Returns a structured county-validation prompt built from the cached quality and
+mental-health workflow. This is useful for Phase 8 pilot follow-up after a demo
+or first deploy.
+
+```bash
+curl -H "X-API-Key: your-key-if-enabled" \
+  "http://127.0.0.1:8000/pilot-feedback/Nairobi"
+```
+
 ## GET /mental-health/indicators
 
 Returns the curated mental-health indicator package together with live KHIS
