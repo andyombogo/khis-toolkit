@@ -8,10 +8,11 @@
 
 Python analytics toolkit for Kenya DHIS2/KHIS health data.
 
-KHIS Toolkit is built for people who work with county health data and need to move quickly from extraction to action. It helps a Kenya Health Records Officer pull DHIS2 data, clean routine reporting issues, check data quality, and generate short forecasts without building a custom workflow from scratch. The package is written with Kenya's county structure, reporting cadence, and review-meeting needs in mind.
+I built KHIS Toolkit for people who work with county health data and need to move quickly from extraction to action. My goal was to make it easier for a Kenya Health Records Officer, analyst, or public health researcher to pull DHIS2 data, clean routine reporting issues, check data quality, and generate short forecasts without rebuilding the same workflow every time. The package is shaped around Kenya's county structure, reporting cadence, and review-meeting realities.
 
 - GitHub: https://github.com/andyombogo/khis-toolkit
 - PyPI: https://pypi.org/project/khis-toolkit/
+- Roadmap: [docs/ROADMAP.md](docs/ROADMAP.md)
 - Render deployment guide: [docs/DEPLOY.md](docs/DEPLOY.md)
 - Release checklist: [docs/PRELAUNCH_CHECKLIST.md](docs/PRELAUNCH_CHECKLIST.md)
 - Launch copy: [docs/LAUNCH_POSTS.md](docs/LAUNCH_POSTS.md)
@@ -21,7 +22,7 @@ KHIS Toolkit is built for people who work with county health data and need to mo
 
 ## Why This Exists
 
-Kenya county teams already use DHIS2/KHIS, but the analytics gap remains real: pulling data is one thing, turning it into something clean, explainable, and useful for county planning is another. In practice, many DHIS2 Python libraries are generic or lightly maintained, and they do not centre Kenya's county hierarchy, KHIS-style data cleaning, or operational forecasting workflows. KHIS Toolkit exists to close that gap with a package that feels familiar to Kenya's health system rather than a generic data-science template.
+Kenya county teams already use DHIS2/KHIS, but I kept seeing the same gap: pulling data is one thing, turning it into something clean, explainable, and useful for county planning is another. Many DHIS2 Python libraries are generic or lightly maintained, and they do not centre Kenya's county hierarchy, KHIS-style cleaning issues, or the kind of operational forecasting that comes up in county review meetings. I started KHIS Toolkit to close that gap with something that feels grounded in the Kenya health system rather than a generic data-science demo.
 
 ## What It Does
 
@@ -82,19 +83,19 @@ county_summary = khis.summarise_county_mental_health(mns)
 
 Deployment is configured in [render.yaml](render.yaml). Follow the [Render deployment guide](docs/DEPLOY.md) to publish the Flask dashboard with demo or KHIS credentials. Render will usually assign `https://khis-toolkit-dashboard.onrender.com` if the service name is available; confirm the actual URL after the first deploy and update this section if Render gives you a different subdomain.
 
-For the public portfolio/demo link, the recommended setup is `KHIS_DATA_MODE=offline_demo`. That keeps the dashboard stable even before KHIS credentials are granted, because it uses bundled county demo data instead of relying on external DHIS2/KHIS uptime.
+For the public portfolio/demo link, I use `KHIS_DATA_MODE=offline_demo`. That keeps the dashboard stable even before KHIS credentials are granted, because it uses bundled county demo data instead of depending on external DHIS2/KHIS uptime.
 
 ## Demo For KHIS Conversations
 
 The public Render link is intentionally designed to be a stable pre-access demo, not a claim of live KHIS connectivity. In `offline_demo` mode, the dashboard uses bundled county sample data to prove the workflow, interface, and county-review value without needing Ministry of Health credentials first.
 
-That makes the demo useful for three things:
+At this stage, the demo is useful for three things:
 
 - showing the KHIS team what the county map, quality checks, and short-horizon forecast workflow will look like
 - demonstrating that the package already understands Kenya county structure and can support malaria and mental-health indicator paths
 - making a narrow ask for read-only access to validate one county workflow instead of requesting a broad national integration up front
 
-Recommended materials before you send the email:
+What I would have ready before sending an access request:
 
 - public demo link
 - [docs/PITCH.md](docs/PITCH.md) for the walkthrough order
@@ -112,11 +113,11 @@ Recommended materials before you send the email:
 
 ## Getting KHIS Credentials
 
-Once you have a working demo to show, the next step is to request real KHIS access through the Ministry of Health support channel at `khissupport@health.go.ke`. Having a concrete demo or GitHub repo makes that conversation much easier because you can show exactly how the data will be used and why live county IDs matter.
+My practical next step after the demo is to request real KHIS access through the Ministry of Health support channel at `khissupport@health.go.ke`. I want that conversation to be based on something concrete, not just an abstract request. A working demo and a public GitHub repo make it easier to show how the data would be used, what the workflow already looks like, and why live county IDs matter.
 
 ## For Researchers And Grant Applications
 
-KHIS Toolkit is a Kenya-first Python workflow for extracting, cleaning, validating, forecasting, and visualising routine DHIS2/KHIS county health data. In a grant or methodology section, it can be described as the reproducible data-engineering and analytics layer used to convert county indicator pulls into analysis-ready time series, quality scorecards, short-horizon forecasts, and dashboard outputs. The design is intentionally operational: the same workflow can support exploratory research, county review meetings, and pilot digital public health deployments without rewriting the pipeline for each study.
+KHIS Toolkit is my Kenya-first Python workflow for extracting, cleaning, validating, forecasting, and visualising routine DHIS2/KHIS county health data. In a grant or methodology section, I would describe it as the reproducible data-engineering and analytics layer I am using to convert county indicator pulls into analysis-ready time series, quality scorecards, short-horizon forecasts, and dashboard outputs. I designed it to stay operational, so the same workflow can support exploratory research, county review meetings, and pilot digital public health deployments without rewriting the pipeline for each new use case.
 
 Suggested citation:
 
@@ -143,9 +144,13 @@ Pull requests are welcome, especially from people who have KHIS access and can h
 
 ## Roadmap
 
-- Uganda and Tanzania DHIS2 support once the Kenya workflow is stable.
-- Mental health indicator workflow for county burden tracking and review.
-- Automated county health report generation from scorecards and forecasts.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the fuller project plan.
+
+The direction is straightforward:
+
+- keep tightening the Kenya workflow until the package is solid in real use
+- extend the mental health indicator path into a stronger county review workflow
+- add automated county reporting once the core extraction, cleaning, and forecasting flow is stable
 
 ## License
 

@@ -1,6 +1,8 @@
 # KHIS Toolkit Roadmap
 
-## Completed Foundations
+This roadmap reflects how I am building KHIS Toolkit from a practical Kenya-first workflow into something strong enough for real county use, research support, and public health demos.
+
+## What I Have Already Built
 
 - [x] Phase 0: repository scaffold, packaging, docs, notebooks, and CI starter files
 - [x] Phase 1: DHIS2 connector, Kenya county resolver, and connector/county tests
@@ -11,13 +13,13 @@
 - [x] Phase 6: FastAPI endpoints, CI/CD hardening, and PyPI publication assets
 - [x] Phase 7: quick-start and county notebooks for first-time evaluators
 
-## Next Build Targets
+## What I Am Working On Next
 
 - [ ] Phase 8: package release, first dashboard deployment, and KHIS user feedback loop
 - [ ] Phase 8: deployment verification, notebook run-through, and launch checklist
 - [ ] Phase 8: public launch assets including GitHub release notes and social copy
 
-## Product Roadmap
+## Longer-Term Direction
 
 - [x] Add a mental health indicator workflow alongside malaria-focused examples
 - [ ] Expand to Uganda and Tanzania DHIS2 deployments after Kenya stabilises
