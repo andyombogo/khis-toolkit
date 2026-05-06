@@ -4,14 +4,15 @@
 
 - PASS: Python modules have top-level docstrings. Verified with an AST audit across `khis/`, `dashboard/`, `src/`, and `tests/` on 2026-03-27.
 - PASS: Public package exports are present in [khis/__init__.py](../khis/__init__.py), including connector, counties, cleaning, quality, forecasting, and demo-safe helpers.
-- PASS: README includes GitHub, PyPI, and Render deployment links in [README.md](../README.md).
+- PASS: README includes GitHub, PyPI, and Streamlit deployment links in [README.md](../README.md).
 - PASS: `.env` is gitignored in [.gitignore](../.gitignore), and [.env.example](../.env.example) includes demo, KHIS, dashboard, and API settings.
 - PASS: All four notebooks executed end to end on 2026-03-27 with the public demo configuration, using demo-safe fallbacks when the public DHIS2 host was slow.
 - PASS: `pytest tests -q` passed on 2026-03-27 with `28 passed, 3 skipped`.
 - PASS: `black --check` passed for `khis/`, `dashboard/`, `tests/`, and `src/` on 2026-03-27.
-- PASS: No sensitive or production credentials are hardcoded in the repo. The only embedded credentials are the public DHIS2 demo credentials intentionally documented in [khis/connector.py](../khis/connector.py), [.env.example](../.env.example), and [render.yaml](../render.yaml).
+- PASS: No sensitive or production credentials are hardcoded in the repo. The only embedded credentials are the public DHIS2 demo credentials intentionally documented in [khis/connector.py](../khis/connector.py), [.env.example](../.env.example), [render.yaml](../render.yaml), and [.streamlit/secrets.example.toml](../.streamlit/secrets.example.toml).
 - PASS: [CHANGELOG.md](../CHANGELOG.md) is current for the `0.1.0` release.
-- PASS: `/health` returns HTTP `200` in the local Flask app verification for [dashboard/app.py](../dashboard/app.py).
+- PASS: `/health` returns HTTP `200` in the legacy local Flask app verification for [dashboard/app.py](../dashboard/app.py).
+- TODO: Run `py -m streamlit run streamlit_app.py` locally and verify the Streamlit dashboard before launch.
 
 ## Notes
 

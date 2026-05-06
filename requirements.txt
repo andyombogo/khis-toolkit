@@ -13,6 +13,7 @@ plotly>=5.15.0
 folium>=0.14.0
 
 # Dashboard
+streamlit>=1.36.0
 flask>=3.0.0
 gunicorn>=21.0.0
 

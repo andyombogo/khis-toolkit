@@ -15,8 +15,8 @@ This roadmap reflects how I am building KHIS Toolkit from a practical Kenya-firs
 
 ## What I Am Working On Next
 
-- [ ] Phase 8: package release, first dashboard deployment, and KHIS user feedback loop
-- [ ] Phase 8: deployment verification, notebook run-through, and launch checklist
+- [ ] Phase 8: package release, first Streamlit dashboard deployment, and KHIS user feedback loop
+- [ ] Phase 8: Streamlit deployment verification, notebook run-through, and launch checklist
 - [ ] Phase 8: public launch assets including GitHub release notes and social copy
 
 ## Longer-Term Direction

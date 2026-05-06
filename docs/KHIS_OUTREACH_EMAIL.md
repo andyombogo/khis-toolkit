@@ -12,7 +12,7 @@ My name is John Andrew and I have built a small Kenya-focused analytics toolkit 
 
 I currently have a public demo link that shows the workflow using stable offline sample county data, so the team can review the product experience before any credentials are shared:
 
-- Demo: https://khis-toolkit-dashboard.onrender.com
+- Demo: https://khis-toolkit.streamlit.app
 - GitHub: https://github.com/andyombogo/khis-toolkit
 
 I would be grateful for a short conversation to show the demo and ask about the best path for a limited validation pilot. My initial request is intentionally small:

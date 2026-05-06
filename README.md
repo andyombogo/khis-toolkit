@@ -13,12 +13,12 @@ I built KHIS Toolkit for people who work with county health data and need to mov
 - GitHub: https://github.com/andyombogo/khis-toolkit
 - PyPI: https://pypi.org/project/khis-toolkit/
 - Roadmap: [docs/ROADMAP.md](docs/ROADMAP.md)
-- Render deployment guide: [docs/DEPLOY.md](docs/DEPLOY.md)
+- Streamlit deployment guide: [docs/DEPLOY.md](docs/DEPLOY.md)
 - Release checklist: [docs/PRELAUNCH_CHECKLIST.md](docs/PRELAUNCH_CHECKLIST.md)
 - Launch copy: [docs/LAUNCH_POSTS.md](docs/LAUNCH_POSTS.md)
 - Pitch outline: [docs/PITCH.md](docs/PITCH.md)
 - KHIS outreach email draft: [docs/KHIS_OUTREACH_EMAIL.md](docs/KHIS_OUTREACH_EMAIL.md)
-- Expected Render URL after first deploy: `https://khis-toolkit-dashboard.onrender.com`
+- Target Streamlit URL after first deploy: `https://khis-toolkit.streamlit.app` if the subdomain is available
 
 ## Why This Exists
 
@@ -31,7 +31,7 @@ Kenya county teams already use DHIS2/KHIS, but I kept seeing the same gap: pulli
 - Bundles real Kenya county boundary geometry for a more credible county dashboard demo.
 - Cleans KHIS data quirks such as period parsing, duplicate rows, missingness flags, and bounded imputation.
 - Generates county data quality scorecards with completeness, outlier, timeliness, and suspicious-zero checks.
-- Produces Prophet, XGBoost, and ensemble forecasts together with a county-facing Flask dashboard.
+- Produces Prophet, XGBoost, and ensemble forecasts together with a county-facing Streamlit dashboard.
 - Adds a mental-health service workflow for curated MNS indicator packages, county summaries, and OHRE-ready downstream integration.
 
 ## Quick Start
@@ -81,13 +81,13 @@ county_summary = khis.summarise_county_mental_health(mns)
 
 ## Live Dashboard
 
-Deployment is configured in [render.yaml](render.yaml). Follow the [Render deployment guide](docs/DEPLOY.md) to publish the Flask dashboard with demo or KHIS credentials. Render will usually assign `https://khis-toolkit-dashboard.onrender.com` if the service name is available; confirm the actual URL after the first deploy and update this section if Render gives you a different subdomain.
+Deployment is currently configured for Streamlit Community Cloud through [streamlit_app.py](streamlit_app.py). Follow the [Streamlit deployment guide](docs/DEPLOY.md) and use `streamlit_app.py` as the main file path. If the `khis-toolkit` subdomain is available, the public demo can live at `https://khis-toolkit.streamlit.app`; otherwise use the Streamlit-assigned URL and update this section after the first deploy.
 
 For the public portfolio/demo link, I use `KHIS_DATA_MODE=offline_demo`. That keeps the dashboard stable even before KHIS credentials are granted, because it uses bundled county demo data instead of depending on external DHIS2/KHIS uptime.
 
 ## Demo For KHIS Conversations
 
-The public Render link is intentionally designed to be a stable pre-access demo, not a claim of live KHIS connectivity. In `offline_demo` mode, the dashboard uses bundled county sample data to prove the workflow, interface, and county-review value without needing Ministry of Health credentials first.
+The public Streamlit link is intentionally designed to be a stable pre-access demo, not a claim of live KHIS connectivity. In `offline_demo` mode, the dashboard uses bundled county sample data to prove the workflow, interface, and county-review value without needing Ministry of Health credentials first.
 
 At this stage, the demo is useful for three things:
 

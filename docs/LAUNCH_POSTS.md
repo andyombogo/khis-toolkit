@@ -1,6 +1,6 @@
 # Launch Posts
 
-Replace `https://khis-toolkit-dashboard.onrender.com` if Render assigns a different live URL after the first deploy.
+Replace `https://khis-toolkit.streamlit.app` if Streamlit assigns a different live URL after the first deploy.
 
 ## LinkedIn
 
@@ -17,7 +17,7 @@ df = khis.get(conn, "malaria", counties=["Nairobi"], periods="last_12_months")
 ```
 
 GitHub: https://github.com/andyombogo/khis-toolkit  
-Live demo: https://khis-toolkit-dashboard.onrender.com
+Live demo: https://khis-toolkit.streamlit.app
 
 If you work in county health records, DHIS2 support, NGO analytics, or public health delivery in Kenya, I’d love your feedback on what should come next.
 
@@ -27,5 +27,5 @@ If you work in county health records, DHIS2 support, NGO analytics, or public he
 
 Built `khis-toolkit` because Kenya DHIS2 work deserves better Python tooling than abandoned generic wrappers. It pulls, cleans, checks quality, forecasts, and maps county health data in one workflow.  
 GitHub: https://github.com/andyombogo/khis-toolkit  
-Live demo: https://khis-toolkit-dashboard.onrender.com  
+Live demo: https://khis-toolkit.streamlit.app
 #Kenya #PublicHealth #OpenSource #DataScience
