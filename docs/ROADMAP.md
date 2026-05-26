@@ -13,14 +13,23 @@ This roadmap reflects how I am building KHIS Toolkit from a practical Kenya-firs
 - [x] Phase 6: FastAPI endpoints, CI/CD hardening, and PyPI publication assets
 - [x] Phase 7: quick-start and county notebooks for first-time evaluators
 
-## What I Am Working On Next
+## Phase 8: Launch and Outreach
 
-- [ ] Phase 8: package release, first Streamlit dashboard deployment, and KHIS user feedback loop
-- [ ] Phase 8: Streamlit deployment verification, notebook run-through, and launch checklist
-- [ ] Phase 8: public launch assets including GitHub release notes and social copy
+- [x] Package published to PyPI as `khis-toolkit` 0.1.0
+- [x] Streamlit dashboard live at https://khis-toolkit.streamlit.app/
+- [x] All four demo notebooks run end-to-end in offline_demo mode
+- [x] Pre-launch checklist passed (formatting, tests, no hardcoded credentials)
+- [x] GitHub release tagged for v0.1.0
+- [x] Repo hardened: CONTRIBUTING.md, CITATION.cff, SECURITY.md, issue templates, PR template
+- [x] Dev dependencies separated from production requirements
+- [ ] KHIS access request submitted to khissupport@health.go.ke
+- [ ] One-county pilot conversation initiated with MoH Digital Health division
+- [ ] Outreach to WHO AFRO / county health teams / NGO analytics partners
+- [ ] Public launch post on LinkedIn and Twitter/X
 
 ## Longer-Term Direction
 
 - [x] Add a mental health indicator workflow alongside malaria-focused examples
+- [ ] Automated county health review reports from forecasts and scorecards
 - [ ] Expand to Uganda and Tanzania DHIS2 deployments after Kenya stabilises
-- [ ] Generate automated county health review reports from forecasts and scorecards
+- [ ] OHRE integration once live KHIS access is validated

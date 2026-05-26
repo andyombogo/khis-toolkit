@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+type: software
+title: "khis-toolkit: Python analytics toolkit for Kenya DHIS2/KHIS health data"
+version: 0.1.0
+date-released: "2026-03-27"
+license: MIT
+url: "https://github.com/andyombogo/khis-toolkit"
+repository-code: "https://github.com/andyombogo/khis-toolkit"
+authors:
+  - family-names: Andrew
+    given-names: John
+    email: andyombogo@gmail.com
+    city: Nairobi
+    country: KE
+keywords:
+  - Kenya
+  - DHIS2
+  - KHIS
+  - public health
+  - health analytics
+  - county health
+  - epidemiology
+  - forecasting
+abstract: >
+  KHIS Toolkit is a Kenya-first Python analytics toolkit for extracting,
+  cleaning, validating, forecasting, and visualising routine DHIS2/KHIS county
+  health data. It covers all 47 Kenya counties, supports malaria and
+  mental-health indicator workflows, generates county data quality scorecards,
+  produces Prophet and ensemble forecasts, and ships a county-level Streamlit
+  dashboard designed for use in county health review meetings and research pipelines.

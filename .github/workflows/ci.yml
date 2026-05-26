@@ -26,11 +26,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install build
+          pip install -r requirements-dev.txt
 
       - name: Check formatting
-        run: black --check khis/ dashboard/ tests/
+        run: black --check khis/ dashboard/ tests/ src/
 
       - name: Run tests
         run: pytest tests/ -v --cov=khis --cov-report=term
